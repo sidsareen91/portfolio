@@ -9,5 +9,8 @@ if (!projectId) {
 
 export default defineCliConfig({
   api: {projectId, dataset},
-  studioHost: 'siddharth-sareen-portfolio',
+  studioHost: 'sidsareen',
+  deployment: {
+    appId: 'ajaetz4abc02uiqa7mt7x679',
+  },
 })
