@@ -1,0 +1,62 @@
+name: Validate Astro source migration
+
+on:
+  push:
+    branches:
+      - astro-source-migration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Clean-runner source and build validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PUBLIC_SANITY_PROJECT_ID: ${{ vars.PUBLIC_SANITY_PROJECT_ID }}
+      PUBLIC_SANITY_DATASET: ${{ vars.PUBLIC_SANITY_DATASET }}
+
+    steps:
+      - name: Check out migration source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify public Sanity variables
+        shell: bash
+        run: |
+          test "$PUBLIC_SANITY_PROJECT_ID" = "5536cj5d"
+          test "$PUBLIC_SANITY_DATASET" = "production"
+
+      - name: Scan tracked source for secrets and local-only files
+        run: node scripts/ci/scan-source.mjs
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run Astro checks
+        run: npm run check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build published Sanity content
+        run: npm run build
+
+      - name: Validate deployment output
+        run: npm run ci:validate-dist
+
+      - name: Upload validated static build
+        uses: actions/upload-artifact@v4
+        with:
+          name: astro-source-migration-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: true

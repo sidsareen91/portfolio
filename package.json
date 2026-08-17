@@ -1,0 +1,40 @@
+{
+  "name": "siddharth-sareen-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "ci:scan-source": "node scripts/ci/scan-source.mjs",
+    "ci:validate-dist": "node scripts/ci/validate-dist.mjs",
+    "cms:dev": "sanity dev",
+    "cms:build": "sanity build studio/dist --yes",
+    "cms:deploy": "sanity deploy",
+    "cms:migrate": "tsx studio/scripts/migrate-content.ts",
+    "cms:migrate:preview": "tsx studio/scripts/migrate-content.ts --dry-run",
+    "cms:seed:drafts": "tsx studio/scripts/migrate-content.ts --draft-seed",
+    "cms:seed:drafts:preview": "tsx studio/scripts/migrate-content.ts --draft-seed --dry-run",
+    "test": "tsx --test src/content/*.test.ts studio/scripts/*.test.ts",
+    "test:cms-migration": "tsx --test studio/scripts/migrate-content.test.ts"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.2.6",
+    "@fontsource/public-sans": "^5.2.6",
+    "@sanity/client": "^7.26.2",
+    "@sanity/image-url": "^2.1.1",
+    "astro": "^5.13.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@sanity/vision": "^6.9.1",
+    "@types/node": "^26.2.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sanity": "^6.9.1",
+    "styled-components": "^6.1.19",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,91 @@
+name: Build and deploy Astro to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  repository_dispatch:
+    types:
+      - sanity-publish
+  workflow_dispatch:
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build production Pages artifact
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      vars.PAGES_ACTIONS_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PUBLIC_SANITY_PROJECT_ID: ${{ vars.PUBLIC_SANITY_PROJECT_ID }}
+      PUBLIC_SANITY_DATASET: ${{ vars.PUBLIC_SANITY_DATASET }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify public Sanity variables
+        shell: bash
+        run: |
+          test "$PUBLIC_SANITY_PROJECT_ID" = "5536cj5d"
+          test "$PUBLIC_SANITY_DATASET" = "production"
+
+      - name: Scan tracked source for secrets and local-only files
+        run: node scripts/ci/scan-source.mjs
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check source
+        run: npm run check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build published Sanity content
+        run: npm run build
+
+      - name: Validate deployment output
+        run: npm run ci:validate-dist
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy approved Pages artifact
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      vars.PAGES_ACTIONS_DEPLOY_ENABLED == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

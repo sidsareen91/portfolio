@@ -1,0 +1,2268 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadHomePagePayload } from '../cms/load';
+import { DEFAULT_BLUEPRINT_CTA_LABEL, getBlueprintCta } from '../content/blueprint-url';
+import { prepareProjectDetailPreview } from '../content/project-detail-preview';
+import type { HomepageSectionId } from '../content/homepage-sections';
+import { getYouTubePosterUrl, getYouTubeVideoId } from '../content/youtube-video';
+import '../styles/home.css';
+
+const { site, pageCopy, seo } = await loadHomePagePayload();
+
+const visibleHomepageSections = new Set(site.sectionOrder);
+const navItems = ([
+  { section: 'showcasedProject', label: 'Work', href: '#work' },
+  { section: 'designLab', label: 'Design Lab', href: '#design-lab' },
+  { section: 'about', label: 'About', href: '#about' },
+  { section: 'contact', label: 'Contact', href: '#contact' },
+] satisfies Array<{section: HomepageSectionId; label: string; href: string}>)
+  .filter(({section}) => visibleHomepageSections.has(section));
+const brandHref = visibleHomepageSections.has('hero') ? '#top' : '#main-content';
+
+const resumeContact = site.contact.links.find((item) => item.label === 'Résumé');
+const isResumeDestination = (value: string | undefined) =>
+  Boolean(value?.startsWith('https://') || value?.startsWith('mailto:'));
+const resumeHref = isResumeDestination(resumeContact?.href) ? resumeContact?.href : undefined;
+const resumeLabel = resumeContact?.value?.trim() || undefined;
+const hasResumeCta = Boolean(resumeHref && resumeLabel);
+const visibleContactLinks = site.contact.links.filter((item) =>
+  item.label !== 'Résumé' || (isResumeDestination(item.href) && Boolean(item.value.trim())),
+);
+const socialContactLabels = new Set(['LinkedIn', 'Discord']);
+const socialContactOrder = new Map([['LinkedIn', 0], ['Discord', 1]]);
+const socialContactLinks = visibleContactLinks
+  .filter((item) => socialContactLabels.has(item.label) && item.href)
+  .sort((a, b) => (socialContactOrder.get(a.label) ?? 99) - (socialContactOrder.get(b.label) ?? 99));
+const socialContactLinkLabels = new Set(socialContactLinks.map((item) => item.label));
+const directoryContactLinks = visibleContactLinks.filter((item) => !socialContactLinkLabels.has(item.label));
+const primaryDirectoryContact = directoryContactLinks.find((item) => item.label === 'Email');
+const secondaryDirectoryContacts = directoryContactLinks.filter((item) => item.label !== 'Email');
+const contactMessageWords = site.contact.message.trim().split(/\s+/);
+const contactMessageEnding = contactMessageWords.pop() || '';
+const contactMessageLead = contactMessageWords.join(' ');
+const initialBlueprintCta = getBlueprintCta(site.prototypes[0]);
+const initialBlueprintCtaHidden = site.prototypes[0].blueprintCtaEnabled === false;
+const initialBlueprintCtaLabel = site.prototypes[0].blueprintCtaLabel?.trim()
+  || DEFAULT_BLUEPRINT_CTA_LABEL;
+const shippedWorkHasDesktopCarousel = site.shippedWork.length > 4;
+const shippedWorkPositionCount = shippedWorkHasDesktopCarousel ? site.shippedWork.length - 3 : 0;
+const shippedDetailProjects = prepareProjectDetailPreview(site.shippedWork, import.meta.env.DEV);
+const youtubePoster = (src: string, poster: string | undefined) => {
+  const videoId = getYouTubeVideoId(src);
+  return videoId ? poster || getYouTubePosterUrl(videoId) : undefined;
+};
+
+const serializeForScript = (value: unknown) => JSON.stringify(value)
+  .replace(/</g, '\\u003c')
+  .replace(/\u2028/g, '\\u2028')
+  .replace(/\u2029/g, '\\u2029');
+---
+
+<BaseLayout
+  title={seo.title}
+  description={seo.description}
+  canonicalUrl={seo.canonicalUrl}
+  socialImage={seo.socialImage?.src}
+  socialImageAlt={seo.socialImage?.alt}
+>
+  <div class="site-frame">
+    <header class="site-header" aria-label="Primary navigation">
+      <a class="brand" href={brandHref} aria-label={`${site.profile.name}, back to top`}>
+        <strong>{site.profile.name}</strong>
+        <span>{site.profile.role}</span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Portfolio sections">
+        {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+        {hasResumeCta && <a class="resume-link" id="resume" href={resumeHref}>{resumeLabel}</a>}
+      </nav>
+
+      <details class="mobile-menu">
+        <summary><span>Menu</span><i aria-hidden="true"></i></summary>
+        <nav aria-label="Mobile portfolio sections">
+          {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+          {hasResumeCta && <a class="resume-link" href={resumeHref}>{resumeLabel}</a>}
+        </nav>
+      </details>
+      {hasResumeCta && <a class="mobile-resume" href={resumeHref}>{resumeLabel}</a>}
+    </header>
+
+    <main id="main-content">
+      {site.sectionOrder.map((section) => <>
+      {section === 'hero' && (
+      <section class="hero" id="top" aria-labelledby="hero-title" data-homepage-section="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">{site.hero.eyebrow}</p>
+          <h1 id="hero-title" data-hero-headline>
+            {site.hero.headline.map((segment) => segment.accent
+              ? <em>{segment.text}</em>
+              : <span>{segment.text}</span>)}
+          </h1>
+        </div>
+
+        <div
+          class:list={['hero-gallery', {'has-multiple-media': site.hero.media.length > 1}]}
+          data-hero-gallery
+          data-auto-switch={String(site.carousels.hero.enabled)}
+          data-switch-seconds={site.carousels.hero.seconds}
+          tabindex={site.hero.media.length > 1 ? 0 : undefined}
+          role="region"
+          aria-roledescription={site.hero.media.length > 1 ? 'carousel' : undefined}
+          aria-label="Featured work gallery"
+        >
+          <div class="hero-stage">
+            {site.hero.media.map((item, index) => (
+              item.kind === 'video' && getYouTubeVideoId(item.src) ? (
+                <div
+                  aria-label={item.alt || 'Featured work video'}
+                  aria-hidden={index !== 0 ? 'true' : 'false'}
+                  class:list={['carousel-video-slide', {'is-active': index === 0, 'media-contain': item.fit === 'contain'}]}
+                  data-hero-slide
+                  data-youtube-video-id={getYouTubeVideoId(item.src)}
+                  data-youtube-title={item.alt || 'Featured work video'}
+                  data-decorative="false"
+                >
+                  <img src={youtubePoster(item.src, item.poster)} alt="" aria-hidden="true" />
+                  <button class="carousel-play" type="button" tabindex={index === 0 ? 0 : -1} aria-label={`Play ${item.alt || 'featured work video'}`}>
+                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                  </button>
+                </div>
+              ) : item.kind === 'video' ? (
+                <div
+                  aria-hidden={index !== 0 ? 'true' : 'false'}
+                  class:list={['carousel-video-slide', {'is-active': index === 0, 'media-contain': item.fit === 'contain'}]}
+                  data-hero-slide
+                  data-decorative="false"
+                  data-native-video-slide
+                >
+                  <video
+                    src={item.src}
+                    poster={item.poster}
+                    aria-label={item.alt || 'Featured work video'}
+                    muted
+                    playsinline
+                    preload={index === 0 ? 'metadata' : 'none'}
+                  ></video>
+                  <button class="carousel-play" type="button" tabindex={index === 0 ? 0 : -1} aria-label={`Play ${item.alt || 'featured work video'}`}>
+                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={item.src}
+                  alt={item.alt}
+                  aria-hidden={index !== 0 ? 'true' : 'false'}
+                  class:list={{ 'is-active': index === 0, 'media-contain': item.fit === 'contain' }}
+                  data-hero-slide
+                  data-decorative="false"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  fetchpriority={index === 0 ? 'high' : undefined}
+                />
+              )
+            ))}
+          </div>
+          {site.hero.media.length > 1 && (
+            <div class="carousel-navigation hero-navigation">
+              <div
+                class="hero-progress carousel-progress"
+                style={`--carousel-items: ${site.hero.media.length}`}
+                aria-label="Select gallery item"
+              >
+                {site.hero.media.map((item, index) => (
+                  <button
+                    type="button"
+                    class:list={{ 'is-active': index === 0 }}
+                    data-hero-dot
+                    aria-label={`Show ${item.alt || `gallery item ${index + 1}`}`}
+                    aria-pressed={index === 0 ? 'true' : 'false'}
+                  ></button>
+                ))}
+              </div>
+              <span class="carousel-position" data-carousel-position aria-live="polite" aria-atomic="true">
+                01 / {String(site.hero.media.length).padStart(2, '0')}
+              </span>
+            </div>
+          )}
+        </div>
+      </section>
+      )}
+
+      {section === 'achievements' && (
+      <section class="stats-band" aria-label="Experience highlights" data-homepage-section="achievements">
+        {site.stats.map((stat) => (
+          <div class="stat">
+            <strong>{stat.value}</strong>
+            <span>{stat.label}</span>
+          </div>
+        ))}
+      </section>
+      )}
+
+      {section === 'showcasedProject' && (
+      <section class="belly-brawl section-pad" id="work" aria-labelledby="belly-title" data-homepage-section="showcasedProject">
+        <div class="project-copy">
+          <p class="section-kicker">{pageCopy.featuredProjectKicker}</p>
+          <h2 id="belly-title">{site.bellyBrawl.title}</h2>
+          {site.bellyBrawl.facts.length > 0 && (
+            <ul class="featured-project-facts" aria-label="Project facts">
+              {site.bellyBrawl.facts.map((fact) => (
+                <li data-fact-color={fact.color}>{fact.text}</li>
+              ))}
+            </ul>
+          )}
+          {site.bellyBrawl.role && (
+            <div class="project-role">
+              <span>My role</span>
+              <strong>{site.bellyBrawl.role}</strong>
+            </div>
+          )}
+          <div class="featured-project-narrative featured-project-overview">
+            <h3>The project</h3>
+            <p>{site.bellyBrawl.summary}</p>
+          </div>
+          {site.bellyBrawl.support && (
+            <div class="featured-project-narrative featured-project-contribution">
+              <h3>My contribution</h3>
+              <p>{site.bellyBrawl.support}</p>
+            </div>
+          )}
+        </div>
+        <div
+          class:list={['project-gallery', {'has-multiple-media': site.bellyBrawl.media.length > 1}]}
+          data-project-gallery
+          data-auto-switch={String(site.carousels.bellyBrawl.enabled)}
+          data-switch-seconds={site.carousels.bellyBrawl.seconds}
+          tabindex={site.bellyBrawl.media.length > 1 ? 0 : undefined}
+          role="region"
+          aria-roledescription={site.bellyBrawl.media.length > 1 ? 'carousel' : undefined}
+          aria-label="Belly Brawl media gallery"
+        >
+          <div class="media-frame project-media project-stage">
+            {site.bellyBrawl.media.map((item, index) => (
+              item.kind === 'video' && getYouTubeVideoId(item.src) ? (
+                <div
+                  aria-label={item.alt || 'Belly Brawl video'}
+                  aria-hidden={index !== 0 ? 'true' : 'false'}
+                  class:list={['carousel-video-slide', {'is-active': index === 0, 'media-contain': item.fit === 'contain'}]}
+                  data-project-slide
+                  data-youtube-video-id={getYouTubeVideoId(item.src)}
+                  data-youtube-title={item.alt || 'Belly Brawl video'}
+                  data-decorative="false"
+                >
+                  <img src={youtubePoster(item.src, item.poster)} alt="" aria-hidden="true" />
+                  <button class="carousel-play" type="button" tabindex={index === 0 ? 0 : -1} aria-label={`Play ${item.alt || 'Belly Brawl video'}`}>
+                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                  </button>
+                </div>
+              ) : item.kind === 'video' ? (
+                <div
+                  aria-hidden={item.decorative || index !== 0 ? 'true' : 'false'}
+                  class:list={['carousel-video-slide', {'is-active': index === 0, 'media-contain': item.fit === 'contain'}]}
+                  data-project-slide
+                  data-decorative={item.decorative ? 'true' : 'false'}
+                  data-native-video-slide
+                >
+                  <video
+                    src={item.src}
+                    poster={item.poster}
+                    aria-label={item.decorative ? undefined : item.alt}
+                    muted
+                    playsinline
+                    preload={index === 0 ? 'metadata' : 'none'}
+                  ></video>
+                  <button class="carousel-play" type="button" tabindex={index === 0 ? 0 : -1} aria-label={`Play ${item.alt || 'Belly Brawl video'}`}>
+                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={item.src}
+                  alt={item.alt}
+                  aria-hidden={item.decorative || index !== 0 ? 'true' : 'false'}
+                  class:list={{ 'is-active': index === 0, 'media-contain': item.fit === 'contain' }}
+                  data-project-slide
+                  data-decorative={item.decorative ? 'true' : 'false'}
+                  loading="lazy"
+                />
+              )
+            ))}
+            {site.bellyBrawl.media.length > 1 && (
+              <div class="carousel-arrows" aria-label="Belly Brawl media navigation">
+                <button class="carousel-arrow" type="button" data-carousel-prev aria-label="Previous Belly Brawl media">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M12.75 4.5 7.25 10l5.5 5.5" /></svg>
+                </button>
+                <button class="carousel-arrow" type="button" data-carousel-next aria-label="Next Belly Brawl media">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7.25 4.5 5.5 5.5-5.5 5.5" /></svg>
+                </button>
+              </div>
+            )}
+          </div>
+          {site.bellyBrawl.media.length > 1 && (
+            <div class="carousel-navigation project-navigation">
+              <div
+                class="project-progress carousel-progress"
+                style={`--carousel-items: ${site.bellyBrawl.media.length}`}
+                aria-label="Select Belly Brawl media"
+              >
+                {site.bellyBrawl.media.map((item, index) => (
+                  <button
+                    type="button"
+                    class:list={{ 'is-active': index === 0 }}
+                    data-project-dot
+                    aria-label={`Show ${item.alt || `gallery item ${index + 1}`}`}
+                    aria-pressed={index === 0 ? 'true' : 'false'}
+                  ></button>
+                ))}
+              </div>
+              <span class="carousel-position" data-carousel-position aria-live="polite" aria-atomic="true">
+                01 / {String(site.bellyBrawl.media.length).padStart(2, '0')}
+              </span>
+            </div>
+          )}
+        </div>
+      </section>
+      )}
+
+      {section === 'designLab' && (
+      <section
+        class:list={['design-lab', {'has-multiple-prototypes': site.prototypes.length > 1}]}
+        id="design-lab"
+        aria-labelledby="lab-title"
+        data-prototype-module
+        data-homepage-section="designLab"
+        data-auto-switch={String(site.carousels.designLab.enabled)}
+        data-switch-seconds={site.carousels.designLab.seconds}
+      >
+        <h2 id="lab-title" class="section-kicker design-lab-heading">{pageCopy.designLabTitle}</h2>
+        <div class="lab-grid">
+          <div class="lab-copy">
+            <div class="lab-prototype-heading">
+              <p
+                class="lab-eyebrow"
+                data-prototype-tag
+                data-tag-color={site.prototypes[0].tag.color}
+              >{site.prototypes[0].tag.label}</p>
+              <h3 data-prototype-title>{site.prototypes[0].title}</h3>
+            </div>
+            <div class="lab-info-card">
+              <div class="lab-tab-shell">
+                <div class="lab-tab-list" role="tablist" aria-label="Prototype information" data-lab-tab-list>
+                  {site.prototypes[0].tabs.map((tab, index) => (
+                    <button
+                      id={`lab-tab-${index}`}
+                      class="lab-tab"
+                      type="button"
+                      role="tab"
+                      aria-selected={index === 0 ? 'true' : 'false'}
+                      aria-controls={`lab-panel-${index}`}
+                      data-lab-tab-index={index}
+                      tabindex={index === 0 ? 0 : -1}
+                    >{tab.label}</button>
+                  ))}
+                </div>
+                <div data-lab-panels>
+                  {site.prototypes[0].tabs.map((tab, index) => (
+                    <div
+                      id={`lab-panel-${index}`}
+                      class="lab-tab-panel"
+                      role="tabpanel"
+                      aria-labelledby={`lab-tab-${index}`}
+                      data-lab-panel-index={index}
+                      hidden={index !== 0}
+                    >
+                      {tab.content?.length ? tab.content.map((block) => block.type === 'paragraph' ? (
+                        <p data-lab-tab-body>
+                          {block.spans.map((span) => span.highlighted
+                            ? <mark class="lab-text-highlight">{span.text}</mark>
+                            : span.text)}
+                        </p>
+                      ) : (
+                        <ul data-lab-tab-items>
+                          {block.items.map((item) => (
+                            <li>{item.spans.map((span) => span.highlighted
+                              ? <mark class="lab-text-highlight">{span.text}</mark>
+                              : span.text)}</li>
+                          ))}
+                        </ul>
+                      )) : (
+                        <>
+                          {tab.body && <p data-lab-tab-body>{tab.body}</p>}
+                          {tab.items?.length && <ul data-lab-tab-items>{tab.items.map((item) => <li>{item}</li>)}</ul>}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button
+              class="blueprint-button"
+              type="button"
+              data-prototype-blueprint
+              hidden={initialBlueprintCtaHidden}
+              disabled={!initialBlueprintCta}
+              aria-label={initialBlueprintCta
+                ? `View ${site.prototypes[0].title} blueprint`
+                : `Blueprint unavailable for ${site.prototypes[0].title}`}
+            >
+              {initialBlueprintCta?.label ?? initialBlueprintCtaLabel}
+            </button>
+          </div>
+
+          <figure
+            class="lab-media media-frame"
+            tabindex={site.prototypes.length > 1 ? 0 : undefined}
+            role="region"
+            aria-roledescription={site.prototypes.length > 1 ? 'carousel' : undefined}
+            aria-label="Design Lab prototype media"
+          >
+            {site.prototypes.map((prototype, index) => (
+              prototype.media.kind === 'video' && getYouTubeVideoId(prototype.media.src) ? (
+                <div
+                  aria-label={prototype.media.alt || `${prototype.title} video`}
+                  aria-hidden={index !== 0 ? 'true' : 'false'}
+                  class:list={['carousel-video-slide', {
+                    'is-active': index === 0,
+                    'media-contain': prototype.media.fit === 'contain',
+                  }]}
+                  data-prototype-media
+                  data-youtube-video-id={getYouTubeVideoId(prototype.media.src)}
+                  data-youtube-title={prototype.media.alt || `${prototype.title} video`}
+                  data-decorative="false"
+                >
+                  <img src={youtubePoster(prototype.media.src, prototype.media.poster)} alt="" aria-hidden="true" />
+                  <button class="carousel-play" type="button" tabindex={index === 0 ? 0 : -1} aria-label={`Play ${prototype.media.alt || `${prototype.title} video`}`}>
+                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                  </button>
+                </div>
+              ) : prototype.media.kind === 'video' ? (
+                <div
+                  aria-hidden={index !== 0 ? 'true' : 'false'}
+                  class:list={['carousel-video-slide', {
+                    'is-active': index === 0,
+                    'media-contain': prototype.media.fit === 'contain',
+                  }]}
+                  data-prototype-media
+                  data-decorative="false"
+                  data-native-video-slide
+                >
+                  <video
+                    src={prototype.media.src}
+                    poster={prototype.media.poster}
+                    aria-label={prototype.media.decorative ? undefined : prototype.media.alt}
+                    muted
+                    playsinline
+                    preload={index === 0 ? 'metadata' : 'none'}
+                  ></video>
+                  <button class="carousel-play" type="button" tabindex={index === 0 ? 0 : -1} aria-label={`Play ${prototype.media.alt || `${prototype.title} video`}`}>
+                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={prototype.media.src}
+                  alt={prototype.media.alt}
+                  class:list={{
+                    'is-active': index === 0,
+                    'media-contain': prototype.media.fit === 'contain',
+                  }}
+                  data-prototype-media
+                  data-decorative={prototype.media.decorative ? 'true' : 'false'}
+                  aria-hidden={prototype.media.decorative || index !== 0 ? 'true' : 'false'}
+                  loading="lazy"
+                  decoding="async"
+                />
+              )
+            ))}
+            {site.prototypes.length > 1 && (
+              <div class="carousel-arrows lab-media-arrows" aria-label="Prototype navigation">
+                <button class="carousel-arrow" type="button" data-prototype-prev aria-label="Previous prototype">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M12.75 4.5 7.25 10l5.5 5.5" /></svg>
+                </button>
+                <button class="carousel-arrow" type="button" data-prototype-next aria-label="Next prototype">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7.25 4.5 5.5 5.5-5.5 5.5" /></svg>
+                </button>
+              </div>
+            )}
+          </figure>
+
+          {site.prototypes.length > 1 && (
+            <div class="carousel-navigation lab-navigation">
+              <div
+                class="lab-progress carousel-progress"
+                style={`--carousel-items: ${site.prototypes.length}`}
+                aria-label="Select prototype"
+              >
+                {site.prototypes.map((prototype, index) => (
+                  <button
+                    type="button"
+                    class:list={{ 'is-active': index === 0 }}
+                    data-prototype-dot
+                    aria-label={`Show ${prototype.title}`}
+                    aria-pressed={index === 0 ? 'true' : 'false'}
+                  ></button>
+                ))}
+              </div>
+              <span class="carousel-position" data-prototype-position aria-live="polite" aria-atomic="true">
+                01 / {String(site.prototypes.length).padStart(2, '0')}
+              </span>
+            </div>
+          )}
+        </div>
+      </section>
+      )}
+
+      {section === 'shippedWork' && (
+      <section class="shipped section-pad" aria-labelledby="shipped-title" data-homepage-section="shippedWork">
+        <div class="section-heading-row">
+          <div>
+            <p class="section-kicker">{pageCopy.shippedWorkKicker}</p>
+            <h2 id="shipped-title">{pageCopy.shippedWorkTitle}</h2>
+          </div>
+          <span class="swipe-hint">Swipe to browse <i aria-hidden="true">→</i></span>
+        </div>
+        <div
+          class:list={['work-carousel', {'is-carousel': shippedWorkHasDesktopCarousel}]}
+          data-shipped-carousel={shippedWorkHasDesktopCarousel ? '' : undefined}
+          tabindex={shippedWorkHasDesktopCarousel ? 0 : undefined}
+          role={shippedWorkHasDesktopCarousel ? 'region' : undefined}
+          aria-roledescription={shippedWorkHasDesktopCarousel ? 'carousel' : undefined}
+          aria-label={shippedWorkHasDesktopCarousel ? 'Selected shipped work carousel' : undefined}
+        >
+          <div class="work-gallery" data-shipped-track={shippedWorkHasDesktopCarousel ? '' : undefined}>
+            {site.shippedWork.map((project) => (
+                <button
+                  class="work-card"
+                  type="button"
+                  data-project-dialog={project.slug}
+                  aria-label={`View project details for ${project.title}`}
+                >
+                <span class="work-art media-frame">
+                  <img
+                    src={project.media.src}
+                    alt={project.media.alt}
+                    class:list={{ 'media-contain': project.media.fit === 'contain' }}
+                    loading="lazy"
+                  />
+                </span>
+                <span class="work-meta">
+                  <strong>{project.title}</strong>
+                  <small>My role</small>
+                  <span>{project.role}</span>
+                </span>
+                </button>
+            ))}
+          </div>
+          {shippedWorkHasDesktopCarousel && (
+            <div class="carousel-arrows work-carousel-arrows" aria-label="Shipped work navigation">
+              <button class="carousel-arrow" type="button" data-shipped-prev aria-label="Show previous shipped projects">
+                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M12.75 4.5 7.25 10l5.5 5.5" /></svg>
+              </button>
+              <button class="carousel-arrow" type="button" data-shipped-next aria-label="Show next shipped projects">
+                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7.25 4.5 5.5 5.5-5.5 5.5" /></svg>
+              </button>
+            </div>
+          )}
+        </div>
+        {shippedWorkHasDesktopCarousel && (
+          <div class="carousel-navigation work-navigation">
+            <div
+              class="work-progress carousel-progress"
+              style={`--carousel-items: ${shippedWorkPositionCount}`}
+              aria-label="Select shipped work position"
+            >
+              {Array.from({length: shippedWorkPositionCount}, (_, index) => (
+                <button
+                  type="button"
+                  class:list={{'is-active': index === 0}}
+                  data-shipped-dot
+                  aria-label={`Show shipped projects ${index + 1} to ${index + 4}`}
+                  aria-pressed={index === 0 ? 'true' : 'false'}
+                ></button>
+              ))}
+            </div>
+            <span class="carousel-position" data-shipped-position aria-live="polite" aria-atomic="true">
+              01 / {String(shippedWorkPositionCount).padStart(2, '0')}
+            </span>
+          </div>
+        )}
+        {shippedWorkHasDesktopCarousel && (
+          <span class="work-carousel-status" data-shipped-status aria-live="polite">
+            Showing projects 1 to 4 of {site.shippedWork.length}
+          </span>
+        )}
+      </section>
+      )}
+
+      {section === 'designApproach' && (
+      <section class="approach-panel" aria-labelledby="approach-title" data-homepage-section="designApproach">
+        <h2 id="approach-title">{pageCopy.approachTitle}</h2>
+        <div class="approach-flow">
+          {site.approach.map((step, index) => (
+            <article class="approach-step">
+              <span class="step-number">{step.number}</span>
+              <h3>{step.title}</h3>
+              <p>{step.description}</p>
+              {index < site.approach.length - 1 && <i class="step-arrow" aria-hidden="true">→</i>}
+            </article>
+          ))}
+        </div>
+      </section>
+      )}
+
+      {section === 'about' && (
+      <section class="about section-pad" id="about" aria-labelledby="about-title" data-homepage-section="about">
+        <div class="about-heading">
+          <p class="section-kicker">{pageCopy.aboutKicker}</p>
+          <h2 id="about-title">{pageCopy.aboutHeading}</h2>
+        </div>
+        <div class="about-grid">
+          <figure class="portrait-card">
+            <img src={site.profile.portrait.src} alt={site.profile.portrait.alt} loading="lazy" />
+          </figure>
+          <div class="bio-card">
+            <p>{site.about.bio}</p>
+          </div>
+          <div class="capability-tags" aria-label="Design focus areas">
+            {site.about.tags.map((tag) => <span>{tag}</span>)}
+          </div>
+          <div class="field-notes">
+            <h3>{pageCopy.fieldNotesTitle}</h3>
+            <dl>
+              {site.about.notes.map((note) => (
+                <div>
+                  <dt>{note.title}</dt>
+                  <dd>{note.description}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </section>
+      )}
+
+      {section === 'contact' && (
+      <section class="contact-poster" id="contact" aria-labelledby="contact-title" data-homepage-section="contact">
+        <div class="contact-message">
+          <p class="section-kicker">{pageCopy.contactKicker}</p>
+          <h2 id="contact-title">
+            {contactMessageLead}{contactMessageLead && ' '}
+            <span class="contact-message-ending">
+              {contactMessageEnding}
+              <svg class="contact-signal" viewBox="0 0 112 72" aria-hidden="true">
+                <path class="controller-shell" d="M19 25c11-5 40-5 51 0 9 4 13 18 15 30 2 11-3 17-11 17-7 0-11-7-16-18-7-3-20-3-27 0-5 11-9 18-16 18-8 0-13-6-11-17 2-12 6-26 15-30Z" />
+                <path class="controller-dpad" d="M27 34v13M20.5 40.5h13" />
+                <circle class="controller-button controller-button-primary" cx="61" cy="35" r="3.6" />
+                <circle class="controller-button controller-button-secondary" cx="69" cy="42" r="3.6" />
+                <path class="controller-thought" d="M78 5h19c6 0 10 4 10 10v7c0 6-4 10-10 10H84l-14 8 5-10c-3-2-5-5-5-9v-6c0-6 4-10 8-10Z" />
+                <path class="controller-heart" d="M88.5 27c-2-1.7-7-4.4-7-8.4 0-2.7 2-4.6 4.6-4.6 1.4 0 2.5.7 3.4 1.8.9-1.1 2-1.8 3.4-1.8 2.6 0 4.6 1.9 4.6 4.6 0 4-5 6.7-9 8.4Z" />
+              </svg>
+            </span>
+          </h2>
+        </div>
+        <div class="contact-panel">
+          {socialContactLinks.length > 0 && (
+            <nav class:list={['contact-launchers', {'is-single': socialContactLinks.length === 1}]} aria-label="Social profiles">
+              {socialContactLinks.map((item) => (
+                <a class="contact-launcher" href={item.href}>
+                  <svg class="contact-launcher-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                    {item.label === 'LinkedIn' ? (
+                      <path d="M0 1.15C0 .51.53 0 1.18 0h13.65C15.47 0 16 .51 16 1.15v13.7c0 .64-.53 1.15-1.18 1.15H1.18C.53 16 0 15.49 0 14.85V1.15Zm4.94 12.24V6.17h-2.4v7.22h2.4ZM3.74 5.18c.84 0 1.36-.55 1.36-1.25-.02-.7-.52-1.24-1.34-1.24-.82 0-1.36.54-1.36 1.24 0 .7.52 1.25 1.33 1.25h.01Zm3.02 8.21h2.4V9.36c0-.22.01-.44.08-.59.17-.43.57-.88 1.23-.88.87 0 1.22.67 1.22 1.64v3.86h2.4V9.25c0-2.22-1.19-3.25-2.77-3.25-1.28 0-1.85.7-2.17 1.19h.01V6.17h-2.4c.03.68 0 7.22 0 7.22Z" />
+                    ) : (
+                      <path d="M13.55 2.91a13.23 13.23 0 0 0-3.26-1.01l-.14.18a12.6 12.6 0 0 0-3.89 0l-.14-.18a13.24 13.24 0 0 0-3.26 1.01 13.4 13.4 0 0 0-2.7 10.59 13.58 13.58 0 0 0 4.17 2.11c.4-.55.75-1.13 1.06-1.71a8.94 8.94 0 0 1-1.65-.79l.4-.31a9.7 9.7 0 0 0 8.98 0l.4.31c-.52.31-1.07.57-1.65.79.3.6.65 1.17 1.06 1.71a13.57 13.57 0 0 0 4.17-2.11 13.4 13.4 0 0 0-2.7-10.59ZM5.58 11.55c-.86 0-1.56-.8-1.56-1.78 0-.97.69-1.77 1.56-1.77.88 0 1.57.8 1.56 1.77 0 .98-.69 1.78-1.56 1.78Zm4.85 0c-.86 0-1.56-.8-1.56-1.78 0-.97.69-1.77 1.56-1.77.88 0 1.57.8 1.56 1.77 0 .98-.69 1.78-1.56 1.78Z" />
+                    )}
+                  </svg>
+                  <span>{item.label}</span>
+                  <svg class="contact-launcher-arrow" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+                    <path d="M5 13 13 5M7 5h6v6" />
+                  </svg>
+                </a>
+              ))}
+            </nav>
+          )}
+          <dl class="contact-details">
+            {primaryDirectoryContact && (
+              <div class="contact-detail contact-detail--primary">
+                <dt>{primaryDirectoryContact.label}</dt>
+                <dd>{primaryDirectoryContact.href ? <a href={primaryDirectoryContact.href}>{primaryDirectoryContact.value}</a> : primaryDirectoryContact.value}</dd>
+              </div>
+            )}
+            {secondaryDirectoryContacts.map((item) => (
+              <div class="contact-detail">
+                <dt>{item.label}</dt>
+                <dd>{item.href ? <a href={item.href}>{item.value}</a> : item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+      )}
+      </>)}
+    </main>
+
+    <footer class="site-footer">
+      <nav aria-label="Footer navigation">
+        {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+      </nav>
+      <p>© {new Date().getFullYear()} {site.profile.name}</p>
+    </footer>
+  </div>
+
+  <dialog
+    class="project-dialog"
+    data-project-modal
+    aria-labelledby={`project-detail-${site.shippedWork[0]?.slug ?? site.bellyBrawl.slug}`}
+  >
+    <div class="project-dialog-shell">
+      <button class="dialog-close" type="button" data-dialog-close aria-label="Close project details">×</button>
+      <article class="project-detail" data-project-detail={site.bellyBrawl.slug} hidden>
+          <header class="project-detail-header">
+            <h2 id={`project-detail-${site.bellyBrawl.slug}`} tabindex="-1">{site.bellyBrawl.title}</h2>
+            <div class="project-detail-role">
+              <span>My role</span>
+              <strong>{site.bellyBrawl.role}</strong>
+            </div>
+          </header>
+          <div class="project-detail-copy">
+            <section>
+              <h3>The project</h3>
+              <p>{site.bellyBrawl.summary}</p>
+            </section>
+            {site.bellyBrawl.support && (
+              <section>
+                <h3>My contribution</h3>
+                <p>{site.bellyBrawl.support}</p>
+              </section>
+            )}
+          </div>
+        </article>
+      {shippedDetailProjects.map((project, projectIndex) => (
+        <article
+          class="project-detail"
+          data-project-detail={project.slug}
+          data-project-index={projectIndex}
+          hidden={projectIndex !== 0}
+        >
+          <header class="project-detail-header">
+            <h2 id={`project-detail-${project.slug}`} tabindex="-1">{project.title}</h2>
+            <div class="project-detail-role">
+              <span>My role</span>
+              <strong>{project.role}</strong>
+            </div>
+          </header>
+
+          <div
+            class:list={['project-detail-gallery', {'has-multiple-media': project.detailMedia.length > 1}]}
+            data-project-detail-gallery
+            tabindex={project.detailMedia.length > 1 ? 0 : undefined}
+            role="region"
+            aria-roledescription={project.detailMedia.length > 1 ? 'carousel' : undefined}
+            aria-label={`${project.title} media gallery`}
+          >
+            <div class="project-detail-stage media-frame">
+              {project.detailMedia.map((item, mediaIndex) => (
+                item.kind === 'video' && getYouTubeVideoId(item.src) ? (
+                  <div
+                    aria-label={item.alt || `${project.title} video`}
+                    aria-hidden={mediaIndex !== 0 ? 'true' : 'false'}
+                    class:list={['carousel-video-slide', {'is-active': mediaIndex === 0, 'media-contain': item.fit === 'contain'}]}
+                    data-project-detail-slide
+                    data-youtube-video-id={getYouTubeVideoId(item.src)}
+                    data-youtube-title={item.alt || `${project.title} video`}
+                    data-decorative="false"
+                  >
+                    <img src={youtubePoster(item.src, item.poster)} alt="" aria-hidden="true" />
+                    <button class="carousel-play" type="button" tabindex={mediaIndex === 0 ? 0 : -1} aria-label={`Play ${item.alt || `${project.title} video`}`}>
+                      <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                    </button>
+                  </div>
+                ) : item.kind === 'video' ? (
+                  <div
+                    aria-hidden={mediaIndex !== 0 ? 'true' : 'false'}
+                    class:list={['carousel-video-slide', {'is-active': mediaIndex === 0, 'media-contain': item.fit === 'contain'}]}
+                    data-project-detail-slide
+                    data-decorative="false"
+                    data-native-video-slide
+                  >
+                    <video
+                      src={item.src}
+                      poster={item.poster}
+                      aria-label={item.decorative ? undefined : item.alt}
+                      playsinline
+                      preload={mediaIndex === 0 ? 'metadata' : 'none'}
+                    ></video>
+                    <button class="carousel-play" type="button" tabindex={mediaIndex === 0 ? 0 : -1} aria-label={`Play ${item.alt || `${project.title} video`}`}>
+                      <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false"><path d="m29 23 21 13-21 13Z" /></svg>
+                    </button>
+                  </div>
+                ) : (
+                  <img
+                    src={item.src}
+                    alt={item.alt}
+                    aria-hidden={item.decorative || mediaIndex !== 0 ? 'true' : 'false'}
+                    class:list={{'is-active': mediaIndex === 0, 'media-contain': item.fit === 'contain'}}
+                    data-project-detail-slide
+                    data-decorative={item.decorative ? 'true' : 'false'}
+                    loading="lazy"
+                  />
+                )
+              ))}
+              {project.detailMedia.length > 1 && (
+                <div class="carousel-arrows" aria-label={`${project.title} media navigation`}>
+                  <button class="carousel-arrow" type="button" data-detail-media-prev aria-label="Previous media">
+                    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M12.75 4.5 7.25 10l5.5 5.5" /></svg>
+                  </button>
+                  <button class="carousel-arrow" type="button" data-detail-media-next aria-label="Next media">
+                    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7.25 4.5 5.5 5.5-5.5 5.5" /></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+            {project.detailMedia.length > 1 && (
+              <div class="carousel-navigation project-detail-progress-row">
+                <div
+                  class="project-detail-progress carousel-progress"
+                  style={`--carousel-items: ${project.detailMedia.length}`}
+                  aria-label={`Select ${project.title} media`}
+                >
+                  {project.detailMedia.map((item, mediaIndex) => (
+                    <button
+                      type="button"
+                      class:list={{'is-active': mediaIndex === 0}}
+                      data-project-detail-dot
+                      aria-label={`Show ${item.alt || `media item ${mediaIndex + 1}`}`}
+                      aria-pressed={mediaIndex === 0 ? 'true' : 'false'}
+                    ></button>
+                  ))}
+                </div>
+                <span class="carousel-position project-detail-media-position" data-project-detail-position aria-live="polite" aria-atomic="true">
+                  01 / {String(project.detailMedia.length).padStart(2, '0')}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {project.facts.length > 0 && (
+            <ul class="project-detail-facts" aria-label="Project facts">
+              {project.facts.map((fact) => (
+                <li data-fact-color={fact.color}>{fact.text}</li>
+              ))}
+            </ul>
+          )}
+
+          <div class="project-detail-copy">
+            <section>
+              <h3>The project</h3>
+              <p>{project.summary}</p>
+            </section>
+            {project.contribution && (
+              <section>
+                <h3>My contribution</h3>
+                <p>{project.contribution}</p>
+              </section>
+            )}
+          </div>
+
+          {project.detailLinks.length > 0 && (
+            <nav class="project-detail-links" aria-label={`${project.title} external links`}>
+              {project.detailLinks.map((link) => (
+                  <a
+                    class:list={['project-store-link', `project-store-link--${link.kind}`]}
+                    href={link.href}
+                    rel="noreferrer"
+                    aria-label={link.kind === 'googlePlay'
+                      ? 'Get it on Google Play'
+                      : link.kind === 'appStore'
+                        ? 'Download on the App Store'
+                        : link.label}
+                  >
+                    {link.kind === 'googlePlay' ? (
+                      <>
+                        <svg class="project-store-mark project-store-mark--play" viewBox="0 0 32 36" aria-hidden="true" focusable="false">
+                          <path fill="#34a853" d="M2.4 2.1c-.7.8-1.1 2-1.1 3.5v24.8c0 1.5.4 2.7 1.1 3.5l.2.2L18.3 18.3v-.6L2.6 1.9l-.2.2Z" />
+                          <path fill="#fbbc04" d="m23.5 23.5-5.2-5.2v-.6l5.2-5.2.1.1 6.2 3.5c1.8 1 1.8 2.7 0 3.7l-6.2 3.6-.1.1Z" />
+                          <path fill="#4285f4" d="m23.6 12.6-5.3 5.4L2.4 2.1c1.1-1.2 2.8-1.3 4.7-.2l16.5 9.4c.5.3.9.7 1.2 1l-1.2.3Z" />
+                          <path fill="#ea4335" d="m23.6 23.4-16.5 9.4c-1.9 1.1-3.6 1-4.7-.2L18.3 18l5.3 5.4Z" />
+                        </svg>
+                        <span class="project-store-copy">
+                          <small>Get it on</small>
+                          <strong>Google Play</strong>
+                        </span>
+                      </>
+                    ) : link.kind === 'appStore' ? (
+                      <>
+                        <svg class="project-store-mark project-store-mark--apple" viewBox="0 0 32 36" aria-hidden="true" focusable="false">
+                          <path fill="currentColor" d="M22.7 18.9c0-4.2 3.5-6.3 3.7-6.4a8 8 0 0 0-6.3-3.4c-2.7-.3-5.2 1.6-6.5 1.6-1.4 0-3.4-1.6-5.6-1.5a8.4 8.4 0 0 0-7.1 4.3c-3.1 5.3-.8 13.2 2.2 17.5 1.5 2.1 3.2 4.4 5.5 4.3 2.2-.1 3-1.4 5.7-1.4 2.6 0 3.4 1.4 5.7 1.3 2.4 0 3.9-2.1 5.3-4.2a17 17 0 0 0 2.4-5c-.1 0-5-2-5-7.1ZM18.4 6.3A7 7 0 0 0 20 1.2a7.2 7.2 0 0 0-4.8 2.5 6.7 6.7 0 0 0-1.7 5 6 6 0 0 0 4.9-2.4Z" />
+                        </svg>
+                        <span class="project-store-copy">
+                          <small>Download on the</small>
+                          <strong>App Store</strong>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{link.label}</span>
+                        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                          <path d="M6 14 14 6m-6 0h6v6" />
+                        </svg>
+                      </>
+                    )}
+                  </a>
+                ))}
+            </nav>
+          )}
+
+          {shippedDetailProjects.length > 1 && (
+            <nav class="project-detail-project-nav" aria-label="Browse shipped projects">
+              <button type="button" data-detail-project-prev>Previous project</button>
+              <span>{String(projectIndex + 1).padStart(2, '0')} / {String(shippedDetailProjects.length).padStart(2, '0')}</span>
+              <button type="button" data-detail-project-next>Next project</button>
+            </nav>
+          )}
+        </article>
+      ))}
+    </div>
+  </dialog>
+
+  <dialog class="blueprint-dialog" data-blueprint-modal aria-labelledby="blueprint-dialog-title">
+    <div class="blueprint-dialog-inner">
+      <header class="blueprint-dialog-header">
+        <div class="blueprint-dialog-heading">
+          <p>Blueprint</p>
+          <h2 id="blueprint-dialog-title" data-blueprint-dialog-title>Prototype Blueprint</h2>
+        </div>
+        <button type="button" class="blueprint-dialog-close" data-blueprint-dialog-close>Close</button>
+      </header>
+      <div class="blueprint-viewer" data-blueprint-viewer aria-busy="false">
+        <div class="blueprint-loading" data-blueprint-loading role="status" aria-live="polite" hidden>
+          <span class="blueprint-loading-track" aria-hidden="true"><span></span></span>
+          <span>Loading blueprint…</span>
+        </div>
+        <iframe
+          data-blueprint-iframe
+          title="Prototype Blueprint"
+          tabindex="0"
+          scrolling="no"
+          loading="eager"
+          allow="fullscreen"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+  </dialog>
+
+  <script is:inline type="application/json" id="prototype-data" set:html={serializeForScript(site.prototypes)}></script>
+
+  <script>
+    import {
+      DEFAULT_BLUEPRINT_CTA_LABEL,
+      getBlueprintCta,
+      getBlueprintViewerSource,
+    } from '../content/blueprint-url';
+    import { getValidPrototypeTabIndex } from '../content/design-lab';
+    import { fitHeroHeadlineElement } from '../content/hero-headline';
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const heroHeadline = document.querySelector<HTMLElement>('[data-hero-headline]');
+    if (heroHeadline) {
+      let heroFitFrame: number | undefined;
+      const fitHeroHeadline = () => {
+        if (heroFitFrame !== undefined) window.cancelAnimationFrame(heroFitFrame);
+        heroFitFrame = window.requestAnimationFrame(() => fitHeroHeadlineElement(heroHeadline));
+      };
+      window.addEventListener('resize', fitHeroHeadline, {passive: true});
+      document.fonts.ready.then(fitHeroHeadline);
+      fitHeroHeadline();
+    }
+    type PrototypeItem = {
+      slug: string;
+      title: string;
+      tag: {label: string; color: 'yellow' | 'mint' | 'coral' | 'lavender'};
+      tabs: Array<{
+        key: string;
+        label: string;
+        content?: Array<
+          | {key: string; type: 'paragraph'; spans: Array<{text: string; highlighted: boolean}>}
+          | {key: string; type: 'list'; items: Array<{key: string; spans: Array<{text: string; highlighted: boolean}>}>}
+        >;
+        body?: string;
+        items?: string[];
+      }>;
+      media: { src: string; alt: string; fit?: 'cover' | 'contain' };
+      blueprintUrl?: string;
+      blueprintCtaEnabled?: boolean;
+      blueprintCtaLabel?: string;
+    };
+    type CarouselController = { start: () => void; stop: () => void };
+    type IdleCarouselController = CarouselController & { reset: () => void };
+    type SwipeAxis = 'pending' | 'horizontal' | 'vertical';
+
+    const stopYouTubePlayback = (slide: HTMLElement) => {
+      slide.querySelector('iframe')?.remove();
+      slide.classList.remove('is-playing');
+    };
+
+    const getNativeVideo = (slide: HTMLElement) =>
+      slide.matches('[data-native-video-slide]')
+        ? slide.querySelector<HTMLVideoElement>('video')
+        : slide instanceof HTMLVideoElement
+          ? slide
+          : null;
+
+    const resetNativeVideo = (slide: HTMLElement) => {
+      const video = getNativeVideo(slide);
+      if (!video) return;
+      const needsPosterReset = slide.classList.contains('is-playing')
+        || !video.paused
+        || video.currentTime > 0;
+      video.pause();
+      slide.classList.remove('is-playing');
+      video.controls = false;
+      if (needsPosterReset) {
+        try { video.currentTime = 0; } catch { /* Media metadata may not be available yet. */ }
+        video.load();
+      }
+    };
+
+    const playNativeVideo = (slide: HTMLElement) => {
+      const video = getNativeVideo(slide);
+      if (!video || slide.classList.contains('is-playing')) return;
+      slide.classList.add('is-playing');
+      video.controls = true;
+      video.addEventListener('ended', () => {
+        resetNativeVideo(slide);
+        slide.dispatchEvent(new CustomEvent('carouselvideoend', {bubbles: true}));
+      }, {once: true});
+      video.play().catch(() => {
+        slide.classList.remove('is-playing');
+        video.controls = false;
+      });
+      slide.dispatchEvent(new CustomEvent('carouselvideoplay', {bubbles: true}));
+    };
+
+    const resetVideoSlide = (slide: HTMLElement) => {
+      if (slide.dataset.youtubeVideoId) stopYouTubePlayback(slide);
+      resetNativeVideo(slide);
+    };
+
+    const playYouTubeVideo = (slide: HTMLElement) => {
+      const videoId = slide.dataset.youtubeVideoId;
+      if (!videoId || slide.classList.contains('is-playing')) return;
+
+      const iframe = document.createElement('iframe');
+      iframe.className = 'carousel-youtube-player';
+      iframe.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+      iframe.title = slide.dataset.youtubeTitle || 'YouTube video';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      slide.classList.add('is-playing');
+      slide.append(iframe);
+      slide.dispatchEvent(new CustomEvent('carouselvideoplay', {bubbles: true}));
+      iframe.focus({preventScroll: true});
+    };
+
+    document.addEventListener('click', (event) => {
+      const playButton = (event.target as HTMLElement).closest<HTMLButtonElement>('.carousel-play');
+      if (!playButton) return;
+      const slide = playButton.closest<HTMLElement>('[data-youtube-video-id], [data-native-video-slide]');
+      if (!slide) return;
+      event.stopPropagation();
+      if (slide.dataset.youtubeVideoId) playYouTubeVideo(slide);
+      else playNativeVideo(slide);
+    });
+
+    const resetAllCarouselVideos = () => {
+      document.querySelectorAll<HTMLElement>('[data-youtube-video-id], [data-native-video-slide]')
+        .forEach(resetVideoSlide);
+    };
+
+    const createIdleAutoplayController = ({
+      enabled,
+      itemCount,
+      intervalMilliseconds,
+      getActiveVideo,
+      advance,
+      syncPlayback,
+    }: {
+      enabled: boolean;
+      itemCount: number;
+      intervalMilliseconds: number;
+      getActiveVideo: () => HTMLVideoElement | null;
+      advance: () => void;
+      syncPlayback: () => void;
+    }): IdleCarouselController => {
+      let running = false;
+      let timer: number | undefined;
+      let waitingVideo: HTMLVideoElement | null = null;
+
+      const handleVideoEnded = () => {
+        waitingVideo = null;
+        if (!running) return;
+        advance();
+        schedule();
+      };
+
+      const clearPendingAdvance = () => {
+        if (timer !== undefined) window.clearTimeout(timer);
+        timer = undefined;
+        waitingVideo?.removeEventListener('ended', handleVideoEnded);
+        waitingVideo = null;
+      };
+
+      const schedule = () => {
+        clearPendingAdvance();
+        if (
+          !running
+          || !enabled
+          || itemCount <= 1
+          || !Number.isFinite(intervalMilliseconds)
+          || intervalMilliseconds <= 0
+          || reducedMotion.matches
+          || document.hidden
+        ) return;
+
+        timer = window.setTimeout(() => {
+          timer = undefined;
+          if (!running) return;
+          const activeVideo = getActiveVideo();
+          if (activeVideo && !activeVideo.paused && !activeVideo.ended) {
+            waitingVideo = activeVideo;
+            activeVideo.addEventListener('ended', handleVideoEnded, {once: true});
+            return;
+          }
+          advance();
+          schedule();
+        }, intervalMilliseconds);
+      };
+
+      const start = () => {
+        running = true;
+        syncPlayback();
+        schedule();
+      };
+      const stop = () => {
+        running = false;
+        clearPendingAdvance();
+      };
+      const reset = () => {
+        if (running) schedule();
+        else start();
+      };
+
+      return {start, stop, reset};
+    };
+
+    const bindIdleActivity = (root: HTMLElement, autoplay: IdleCarouselController) => {
+      let lastPointerActivity = 0;
+      let pointerHeld = false;
+      root.addEventListener('pointerdown', () => {
+        pointerHeld = true;
+        autoplay.stop();
+      }, {passive: true});
+      const releasePointer = () => {
+        pointerHeld = false;
+        autoplay.start();
+      };
+      root.addEventListener('pointerup', releasePointer, {passive: true});
+      root.addEventListener('pointercancel', releasePointer, {passive: true});
+      root.addEventListener('pointermove', (event) => {
+        if (pointerHeld || event.pointerType === 'touch') return;
+        const now = performance.now();
+        if (now - lastPointerActivity < 240) return;
+        lastPointerActivity = now;
+        autoplay.reset();
+      }, {passive: true});
+      root.addEventListener('focusin', autoplay.reset);
+    };
+
+    const setupHorizontalSwipe = (
+      surface: HTMLElement | null,
+      onSwipe: (direction: -1 | 1) => void,
+      options: {minimumDistance?: number} = {},
+    ) => {
+      if (!surface) return;
+
+      const minimumDistance = options.minimumDistance ?? 45;
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchAxis: SwipeAxis = 'pending';
+      let pointerStartX = 0;
+      let pointerStartY = 0;
+      let pointerActive = false;
+      let wheelDistance = 0;
+      let wheelLocked = false;
+
+      const resetTouch = () => {
+        touchStartX = 0;
+        touchStartY = 0;
+        touchAxis = 'pending';
+      };
+
+      surface.addEventListener('touchstart', (event) => {
+        touchStartX = event.changedTouches[0]?.clientX ?? 0;
+        touchStartY = event.changedTouches[0]?.clientY ?? 0;
+        touchAxis = 'pending';
+      }, {passive: true});
+
+      surface.addEventListener('touchmove', (event) => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        const distanceX = Math.abs(deltaX);
+        const distanceY = Math.abs(deltaY);
+
+        if (touchAxis === 'pending' && Math.max(distanceX, distanceY) >= 8) {
+          if (distanceX >= distanceY * 0.78) touchAxis = 'horizontal';
+          else if (distanceY >= 16 && distanceY > distanceX * 1.35) touchAxis = 'vertical';
+        }
+
+        if (touchAxis === 'horizontal' && event.cancelable) event.preventDefault();
+      }, {passive: false});
+
+      surface.addEventListener('touchend', (event) => {
+        const deltaX = (event.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
+        const deltaY = (event.changedTouches[0]?.clientY ?? touchStartY) - touchStartY;
+        const horizontalIntent = touchAxis === 'horizontal'
+          || (touchAxis === 'pending' && Math.abs(deltaX) >= Math.abs(deltaY) * 0.78);
+
+        if (horizontalIntent && Math.abs(deltaX) > minimumDistance) onSwipe(deltaX < 0 ? 1 : -1);
+        resetTouch();
+      }, {passive: true});
+
+      surface.addEventListener('touchcancel', resetTouch, {passive: true});
+
+      surface.addEventListener('pointerdown', (event) => {
+        const interactiveTarget = event.target instanceof Element
+          && Boolean(event.target.closest('button, a, input, select, textarea'));
+        if (
+          interactiveTarget
+          || !window.matchMedia('(min-width: 1024px)').matches
+          || event.pointerType === 'touch'
+          || event.button !== 0
+        ) return;
+        pointerStartX = event.clientX;
+        pointerStartY = event.clientY;
+        pointerActive = true;
+        surface.classList.add('is-dragging');
+        surface.setPointerCapture(event.pointerId);
+      });
+
+      surface.addEventListener('pointermove', (event) => {
+        if (!pointerActive) return;
+        const deltaX = event.clientX - pointerStartX;
+        const deltaY = event.clientY - pointerStartY;
+        if (Math.abs(deltaX) > 8 && Math.abs(deltaX) >= Math.abs(deltaY) * 0.9 && event.cancelable) {
+          event.preventDefault();
+        }
+      }, {passive: false});
+
+      const finishPointerSwipe = (event: PointerEvent) => {
+        if (!pointerActive) return;
+        const deltaX = event.clientX - pointerStartX;
+        const deltaY = event.clientY - pointerStartY;
+        const horizontalIntent = Math.abs(deltaX) >= Math.abs(deltaY) * 0.9;
+        pointerActive = false;
+        surface.classList.remove('is-dragging');
+        if (surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
+        if (horizontalIntent && Math.abs(deltaX) > minimumDistance) onSwipe(deltaX < 0 ? 1 : -1);
+      };
+
+      surface.addEventListener('pointerup', finishPointerSwipe);
+      surface.addEventListener('pointercancel', (event) => {
+        pointerActive = false;
+        surface.classList.remove('is-dragging');
+        if (surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
+      });
+
+      surface.addEventListener('wheel', (event) => {
+        if (!window.matchMedia('(min-width: 1024px)').matches) return;
+        const horizontalIntent = Math.abs(event.deltaX) > 8 && Math.abs(event.deltaX) > Math.abs(event.deltaY) * 1.15;
+        if (!horizontalIntent) return;
+        if (event.cancelable) event.preventDefault();
+        if (wheelLocked) return;
+
+        wheelDistance += event.deltaX;
+        if (Math.abs(wheelDistance) < minimumDistance) return;
+        onSwipe(wheelDistance > 0 ? 1 : -1);
+        wheelDistance = 0;
+        wheelLocked = true;
+        window.setTimeout(() => { wheelLocked = false; }, 360);
+      }, {passive: false});
+    };
+
+    const setupMediaCarousel = (
+      root: HTMLElement | null,
+      slideSelector: string,
+      dotSelector: string,
+    ): CarouselController | null => {
+      if (!root) return null;
+      const slides = Array.from(root.querySelectorAll<HTMLElement>(slideSelector));
+      const dots = Array.from(root.querySelectorAll<HTMLElement>(dotSelector));
+      const position = root.querySelector<HTMLElement>('[data-carousel-position]');
+      if (!slides.length) return null;
+      const autoSwitchEnabled = root.dataset.autoSwitch === 'true';
+      const switchIntervalMilliseconds = Number(root.dataset.switchSeconds) * 1000;
+
+      let currentIndex = 0;
+
+      const keepActiveControlVisible = () => {
+        const activeDot = dots[currentIndex];
+        const progress = activeDot?.parentElement;
+        if (!activeDot || !progress || progress.scrollWidth <= progress.clientWidth) return;
+        const left = activeDot.offsetLeft - (progress.clientWidth - activeDot.offsetWidth) / 2;
+        progress.scrollTo({
+          left: Math.max(0, left),
+          behavior: reducedMotion.matches ? 'auto' : 'smooth',
+        });
+      };
+
+      const syncMediaPlayback = () => {
+        slides.forEach((slide, index) => {
+          if (index !== currentIndex) resetNativeVideo(slide);
+        });
+      };
+
+      const show = (nextIndex: number) => {
+        currentIndex = (nextIndex + slides.length) % slides.length;
+        slides.forEach((slide, index) => {
+          const active = index === currentIndex;
+          const decorative = slide.dataset.decorative === 'true';
+          slide.classList.toggle('is-active', active);
+          slide.setAttribute('aria-hidden', String(decorative || !active));
+          slide.querySelector<HTMLButtonElement>('.carousel-play')?.setAttribute('tabindex', active ? '0' : '-1');
+          if (!active) resetVideoSlide(slide);
+        });
+        dots.forEach((dot, index) => {
+          const active = index === currentIndex;
+          dot.classList.toggle('is-active', active);
+          dot.setAttribute('aria-pressed', String(active));
+        });
+        if (position) {
+          position.textContent = `${String(currentIndex + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+        }
+        keepActiveControlVisible();
+        syncMediaPlayback();
+      };
+
+      const autoplay = createIdleAutoplayController({
+        enabled: autoSwitchEnabled,
+        itemCount: slides.length,
+        intervalMilliseconds: switchIntervalMilliseconds,
+        getActiveVideo: () => getNativeVideo(slides[currentIndex]),
+        advance: () => show(currentIndex + 1),
+        syncPlayback: syncMediaPlayback,
+      });
+      root.addEventListener('carouselvideoplay', autoplay.stop);
+      root.addEventListener('carouselvideoend', autoplay.start);
+
+      if (slides.length > 1) {
+        dots.forEach((dot, index) => dot.addEventListener('click', () => {
+          show(index);
+          autoplay.reset();
+        }));
+        root.querySelector('[data-carousel-prev]')?.addEventListener('click', () => {
+          show(currentIndex - 1);
+          autoplay.reset();
+        });
+        root.querySelector('[data-carousel-next]')?.addEventListener('click', () => {
+          show(currentIndex + 1);
+          autoplay.reset();
+        });
+        root.addEventListener('keydown', (event) => {
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.preventDefault();
+            show(currentIndex + (event.key === 'ArrowRight' ? 1 : -1));
+            autoplay.reset();
+          }
+        });
+        const swipeSurface = root.querySelector<HTMLElement>('.hero-stage, .project-stage') ?? root;
+        setupHorizontalSwipe(swipeSurface, (direction) => {
+          show(currentIndex + direction);
+          autoplay.reset();
+        });
+        bindIdleActivity(root, autoplay);
+      }
+
+      show(0);
+      return autoplay;
+    };
+
+    const mediaCarousels = [
+      setupMediaCarousel(
+        document.querySelector<HTMLElement>('[data-hero-gallery]'),
+        '[data-hero-slide]',
+        '[data-hero-dot]',
+      ),
+      setupMediaCarousel(
+        document.querySelector<HTMLElement>('[data-project-gallery]'),
+        '[data-project-slide]',
+        '[data-project-dot]',
+      ),
+    ].filter((carousel): carousel is CarouselController => carousel !== null);
+
+    const setupShippedWorkCarousel = () => {
+      const root = document.querySelector<HTMLElement>('[data-shipped-carousel]');
+      const track = root?.querySelector<HTMLElement>('[data-shipped-track]');
+      if (!root || !track) return;
+
+      const cards = Array.from(track.querySelectorAll<HTMLElement>('.work-card'));
+      const dots = Array.from(root.parentElement?.querySelectorAll<HTMLButtonElement>('[data-shipped-dot]') ?? []);
+      const previousButton = root.querySelector<HTMLButtonElement>('[data-shipped-prev]');
+      const nextButton = root.querySelector<HTMLButtonElement>('[data-shipped-next]');
+      const status = root.parentElement?.querySelector<HTMLElement>('[data-shipped-status]');
+      const position = root.parentElement?.querySelector<HTMLElement>('[data-shipped-position]');
+      const desktopViewport = window.matchMedia('(min-width: 1024px)');
+      const visibleCards = 4;
+      const maximumIndex = Math.max(0, cards.length - visibleCards);
+      let currentIndex = 0;
+      let cardOffsets: number[] = [];
+      let scrollIdleTimer: number | undefined;
+      let scrollAnimationFrame: number | undefined;
+      let resizeFrame: number | undefined;
+
+      if (maximumIndex === 0) return;
+
+      const refreshCardOffsets = () => {
+        const firstOffset = cards[0]?.offsetLeft ?? 0;
+        cardOffsets = cards.map((card) => card.offsetLeft - firstOffset);
+      };
+
+      const cardOffset = (index: number) => cardOffsets[index] ?? 0;
+
+      const syncControls = (nextIndex: number) => {
+        currentIndex = Math.max(0, Math.min(nextIndex, maximumIndex));
+        dots.forEach((dot, index) => {
+          const active = index === currentIndex;
+          dot.classList.toggle('is-active', active);
+          dot.setAttribute('aria-pressed', String(active));
+        });
+        if (previousButton) previousButton.disabled = currentIndex === 0;
+        if (nextButton) nextButton.disabled = currentIndex === maximumIndex;
+        if (status) {
+          status.textContent = `Showing projects ${currentIndex + 1} to ${Math.min(currentIndex + visibleCards, cards.length)} of ${cards.length}`;
+        }
+        if (position) {
+          position.textContent = `${String(currentIndex + 1).padStart(2, '0')} / ${String(maximumIndex + 1).padStart(2, '0')}`;
+        }
+      };
+
+      const stopScrollAnimation = () => {
+        if (scrollAnimationFrame !== undefined) {
+          window.cancelAnimationFrame(scrollAnimationFrame);
+          scrollAnimationFrame = undefined;
+        }
+        track.classList.remove('is-animating');
+      };
+
+      const animateTo = (targetLeft: number) => {
+        stopScrollAnimation();
+        const startLeft = track.scrollLeft;
+        const distance = targetLeft - startLeft;
+        if (reducedMotion.matches || Math.abs(distance) < 1) {
+          track.scrollTo({left: targetLeft, behavior: 'auto'});
+          return;
+        }
+
+        const cardWidth = Math.max(cards[0]?.getBoundingClientRect().width ?? 1, 1);
+        const duration = Math.min(620, 430 + (Math.abs(distance) / cardWidth) * 90);
+        const startedAt = performance.now();
+        track.classList.add('is-animating');
+
+        const step = (now: number) => {
+          const progress = Math.min((now - startedAt) / duration, 1);
+          const easedProgress = 1 - Math.pow(1 - progress, 4);
+          track.scrollTo({left: startLeft + distance * easedProgress, behavior: 'auto'});
+          if (progress < 1) {
+            scrollAnimationFrame = window.requestAnimationFrame(step);
+            return;
+          }
+
+          scrollAnimationFrame = undefined;
+          track.scrollTo({left: targetLeft, behavior: 'auto'});
+          track.classList.remove('is-animating');
+        };
+
+        scrollAnimationFrame = window.requestAnimationFrame(step);
+      };
+
+      const show = (nextIndex: number, animate = true) => {
+        syncControls(nextIndex);
+        if (!desktopViewport.matches) return;
+        const targetLeft = cardOffset(currentIndex);
+        if (!animate) {
+          stopScrollAnimation();
+          track.scrollTo({left: targetLeft, behavior: 'auto'});
+          return;
+        }
+        animateTo(targetLeft);
+      };
+
+      previousButton?.addEventListener('click', () => show(currentIndex - 1));
+      nextButton?.addEventListener('click', () => show(currentIndex + 1));
+      dots.forEach((dot, index) => dot.addEventListener('click', () => show(index)));
+
+      root.addEventListener('keydown', (event) => {
+        if (!desktopViewport.matches || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+        event.preventDefault();
+        show(currentIndex + (event.key === 'ArrowRight' ? 1 : -1));
+      });
+
+      const syncFromScrollPosition = () => {
+        const closestIndex = cardOffsets.reduce((closest, offset, index) => (
+          Math.abs(track.scrollLeft - offset) < Math.abs(track.scrollLeft - cardOffsets[closest])
+            ? index
+            : closest
+        ), 0);
+        syncControls(Math.min(closestIndex, maximumIndex));
+      };
+
+      track.addEventListener('scroll', () => {
+        if (!desktopViewport.matches || scrollAnimationFrame !== undefined) return;
+        if (scrollIdleTimer !== undefined) window.clearTimeout(scrollIdleTimer);
+        scrollIdleTimer = window.setTimeout(() => {
+          scrollIdleTimer = undefined;
+          syncFromScrollPosition();
+        }, 90);
+      }, {passive: true});
+
+      track.addEventListener('pointerdown', stopScrollAnimation, {passive: true});
+      track.addEventListener('wheel', stopScrollAnimation, {passive: true});
+
+      desktopViewport.addEventListener('change', () => {
+        if (!desktopViewport.matches) return;
+        refreshCardOffsets();
+        show(currentIndex, false);
+      });
+      window.addEventListener('resize', () => {
+        if (!desktopViewport.matches || resizeFrame !== undefined) return;
+        resizeFrame = window.requestAnimationFrame(() => {
+          resizeFrame = undefined;
+          refreshCardOffsets();
+          show(currentIndex, false);
+        });
+      }, {passive: true});
+
+      refreshCardOffsets();
+      syncControls(0);
+    };
+
+    setupShippedWorkCarousel();
+
+    const syncCarouselAutoplay = () => {
+      const shouldPause = document.hidden
+        || document.documentElement.classList.contains('blueprint-dialog-open')
+        || document.documentElement.classList.contains('project-dialog-open');
+      if (document.hidden) resetAllCarouselVideos();
+      mediaCarousels.forEach((carousel) => shouldPause ? carousel.stop() : carousel.start());
+    };
+    reducedMotion.addEventListener('change', syncCarouselAutoplay);
+    document.addEventListener('visibilitychange', syncCarouselAutoplay);
+    window.addEventListener('pagehide', resetAllCarouselVideos);
+    syncCarouselAutoplay();
+
+    const prototypeData = JSON.parse(document.querySelector('#prototype-data')?.textContent ?? '[]') as PrototypeItem[];
+    const prototypeModule = document.querySelector<HTMLElement>('[data-prototype-module]');
+    let prototypeIndex = 0;
+    let activePrototypeTabIndex = 0;
+    const prototypeTag = prototypeModule?.querySelector<HTMLElement>('[data-prototype-tag]');
+    const prototypeTitle = prototypeModule?.querySelector<HTMLElement>('[data-prototype-title]');
+    const prototypeTabList = prototypeModule?.querySelector<HTMLElement>('[data-lab-tab-list]');
+    const prototypePanelsRoot = prototypeModule?.querySelector<HTMLElement>('[data-lab-panels]');
+    const prototypeMedia = Array.from(prototypeModule?.querySelectorAll<HTMLElement>('[data-prototype-media]') ?? []);
+    const prototypeBlueprint = prototypeModule?.querySelector<HTMLButtonElement>('[data-prototype-blueprint]');
+    const prototypePosition = prototypeModule?.querySelector('[data-prototype-position]');
+    const prototypeDots = Array.from(prototypeModule?.querySelectorAll<HTMLButtonElement>('[data-prototype-dot]') ?? []);
+    const prototypeMediaStage = prototypeModule?.querySelector<HTMLElement>('.lab-media');
+    const prototypeAutoSwitchEnabled = prototypeModule?.dataset.autoSwitch === 'true';
+    const prototypeSwitchIntervalMilliseconds = Number(prototypeModule?.dataset.switchSeconds) * 1000;
+    let prototypeAutoplay: IdleCarouselController | undefined;
+    let prototypePanelTransitionAnimations: Animation[] = [];
+    let prototypePanelTransitionId = 0;
+    let prototypeContentTransitionId = 0;
+    let prototypeContentAnimations: Animation[] = [];
+
+    const keepActivePrototypeControlVisible = () => {
+      const activeDot = prototypeDots[prototypeIndex];
+      const progress = activeDot?.parentElement;
+      if (!activeDot || !progress || progress.scrollWidth <= progress.clientWidth) return;
+      const left = activeDot.offsetLeft - (progress.clientWidth - activeDot.offsetWidth) / 2;
+      progress.scrollTo({
+        left: Math.max(0, left),
+        behavior: reducedMotion.matches ? 'auto' : 'smooth',
+      });
+    };
+    const blueprintModal = document.querySelector<HTMLDialogElement>('[data-blueprint-modal]');
+    const blueprintDialogTitle = blueprintModal?.querySelector('[data-blueprint-dialog-title]');
+    const blueprintViewer = blueprintModal?.querySelector<HTMLElement>('[data-blueprint-viewer]');
+    const blueprintLoading = blueprintModal?.querySelector<HTMLElement>('[data-blueprint-loading]');
+    const blueprintIframe = blueprintModal?.querySelector<HTMLIFrameElement>('[data-blueprint-iframe]');
+    const blueprintClose = blueprintModal?.querySelector<HTMLButtonElement>('[data-blueprint-dialog-close]');
+    const siteFrame = document.querySelector<HTMLElement>('.site-frame');
+    let blueprintReturnFocus: HTMLElement | null = null;
+    let blueprintLoadFrame: number | undefined;
+
+    const setBlueprintBackgroundInert = (isInert: boolean) => {
+      if (!siteFrame) return;
+      if (isInert) {
+        siteFrame.setAttribute('inert', '');
+        siteFrame.setAttribute('aria-hidden', 'true');
+      } else {
+        siteFrame.removeAttribute('inert');
+        siteFrame.removeAttribute('aria-hidden');
+      }
+    };
+
+    const setBlueprintLoading = (isLoading: boolean) => {
+      if (blueprintViewer) blueprintViewer.setAttribute('aria-busy', String(isLoading));
+      if (blueprintLoading) blueprintLoading.hidden = !isLoading;
+    };
+
+    const getPrototypeInfoTabs = () => Array.from(
+      prototypeTabList?.querySelectorAll<HTMLButtonElement>('[data-lab-tab-index]') ?? [],
+    );
+    const getPrototypeInfoPanels = () => Array.from(
+      prototypePanelsRoot?.querySelectorAll<HTMLElement>('[data-lab-panel-index]') ?? [],
+    );
+
+    const stopPrototypePanelTransition = () => {
+      prototypePanelTransitionAnimations.forEach((animation) => animation.cancel());
+      prototypePanelTransitionAnimations = [];
+      if (!prototypePanelsRoot) return;
+      prototypePanelsRoot.style.removeProperty('height');
+      prototypePanelsRoot.classList.remove('is-tab-transitioning');
+      prototypePanelsRoot.removeAttribute('aria-busy');
+    };
+
+    const safeDomToken = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+    const createPrototypePanelContent = (tab: PrototypeItem['tabs'][number]) => {
+      const fragment = document.createDocumentFragment();
+      const appendSpans = (
+        parent: HTMLElement,
+        spans: Array<{text: string; highlighted: boolean}>,
+      ) => {
+        parent.append(...spans.map((span) => {
+          if (!span.highlighted) return document.createTextNode(span.text);
+          const highlight = document.createElement('mark');
+          highlight.className = 'lab-text-highlight';
+          highlight.textContent = span.text;
+          return highlight;
+        }));
+      };
+
+      if (tab.content?.length) {
+        tab.content.forEach((block) => {
+          if (block.type === 'paragraph') {
+            const paragraph = document.createElement('p');
+            paragraph.dataset.labTabBody = '';
+            appendSpans(paragraph, block.spans);
+            fragment.append(paragraph);
+            return;
+          }
+
+          const list = document.createElement('ul');
+          list.dataset.labTabItems = '';
+          block.items.forEach((item) => {
+            const listItem = document.createElement('li');
+            appendSpans(listItem, item.spans);
+            list.append(listItem);
+          });
+          fragment.append(list);
+        });
+        return fragment;
+      }
+
+      if (tab.body?.trim()) {
+        const paragraph = document.createElement('p');
+        paragraph.dataset.labTabBody = '';
+        paragraph.textContent = tab.body.trim();
+        fragment.append(paragraph);
+      }
+      const items = tab.items?.filter((item) => item.trim()) ?? [];
+      if (items.length) {
+        const list = document.createElement('ul');
+        list.dataset.labTabItems = '';
+        list.append(...items.map((item) => {
+          const listItem = document.createElement('li');
+          listItem.textContent = item;
+          return listItem;
+        }));
+        fragment.append(list);
+      }
+      return fragment;
+    };
+
+    const renderPrototypeTabs = (prototype: PrototypeItem) => {
+      if (!prototypeTabList || !prototypePanelsRoot) return;
+      prototypePanelTransitionId += 1;
+      stopPrototypePanelTransition();
+      activePrototypeTabIndex = getValidPrototypeTabIndex(prototype, 0);
+      const identity = safeDomToken(prototype.slug || String(prototypeIndex));
+      const tabs = prototype.tabs.map((tab, index) => {
+        const button = document.createElement('button');
+        button.id = `lab-${identity}-tab-${safeDomToken(tab.key)}`;
+        button.className = 'lab-tab';
+        button.type = 'button';
+        button.role = 'tab';
+        button.dataset.labTabIndex = String(index);
+        button.setAttribute('aria-selected', String(index === activePrototypeTabIndex));
+        button.setAttribute('aria-controls', `lab-${identity}-panel-${safeDomToken(tab.key)}`);
+        button.tabIndex = index === activePrototypeTabIndex ? 0 : -1;
+        button.textContent = tab.label;
+        return button;
+      });
+      const panels = prototype.tabs.map((tab, index) => {
+        const panel = document.createElement('div');
+        panel.id = `lab-${identity}-panel-${safeDomToken(tab.key)}`;
+        panel.className = 'lab-tab-panel';
+        panel.role = 'tabpanel';
+        panel.dataset.labPanelIndex = String(index);
+        panel.setAttribute('aria-labelledby', `lab-${identity}-tab-${safeDomToken(tab.key)}`);
+        panel.hidden = index !== activePrototypeTabIndex;
+        panel.append(createPrototypePanelContent(tab));
+        return panel;
+      });
+      prototypeTabList.replaceChildren(...tabs);
+      prototypePanelsRoot.replaceChildren(...panels);
+    };
+
+    const showPrototypeInfo = (requestedIndex: number, focus = false) => {
+      const prototype = prototypeData[prototypeIndex];
+      if (!prototype) return;
+      const nextIndex = getValidPrototypeTabIndex(prototype, requestedIndex);
+      const prototypeInfoTabs = getPrototypeInfoTabs();
+      const prototypeInfoPanels = getPrototypeInfoPanels();
+      const previousPanel = prototypeInfoPanels.find((panel) => !panel.hidden);
+      const nextPanel = prototypeInfoPanels.find(
+        (panel) => Number(panel.dataset.labPanelIndex) === nextIndex,
+      );
+      const transitionId = ++prototypePanelTransitionId;
+
+      stopPrototypePanelTransition();
+
+      prototypeInfoTabs.forEach((tab) => {
+        const active = Number(tab.dataset.labTabIndex) === nextIndex;
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+        if (active && focus) {
+          tab.focus();
+          tab.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        }
+      });
+      activePrototypeTabIndex = nextIndex;
+
+      if (
+        !nextPanel
+        || nextPanel === previousPanel
+        || reducedMotion.matches
+        || !previousPanel
+        || typeof previousPanel.animate !== 'function'
+      ) {
+        prototypeInfoPanels.forEach((panel) => {
+          panel.hidden = Number(panel.dataset.labPanelIndex) !== nextIndex;
+        });
+        prototypePanelsRoot?.removeAttribute('aria-busy');
+        return;
+      }
+
+      prototypePanelsRoot?.setAttribute('aria-busy', 'true');
+      prototypePanelsRoot?.classList.add('is-tab-transitioning');
+      const compactLayout = window.matchMedia('(max-width: 767px)').matches;
+      const startHeight = prototypePanelsRoot?.getBoundingClientRect().height ?? 0;
+      if (compactLayout && prototypePanelsRoot) {
+        prototypePanelsRoot.style.height = `${startHeight}px`;
+      }
+      const exitAnimation = previousPanel.animate([
+        {opacity: 1, transform: 'translateY(0)', filter: 'blur(0)'},
+        {opacity: 0, transform: 'translateY(4px)', filter: 'blur(1.5px)'},
+      ], {
+        duration: 80,
+        easing: 'cubic-bezier(0.4, 0, 1, 1)',
+        fill: 'both',
+      });
+      prototypePanelTransitionAnimations = [exitAnimation];
+
+      exitAnimation.finished.then(() => {
+        if (transitionId !== prototypePanelTransitionId) return;
+        exitAnimation.cancel();
+        prototypeInfoPanels.forEach((panel) => {
+          panel.hidden = Number(panel.dataset.labPanelIndex) !== nextIndex;
+        });
+
+        const enterAnimation = nextPanel.animate([
+          {opacity: 0, transform: 'translateY(-8px)', filter: 'blur(2px)'},
+          {opacity: 1, transform: 'translateY(0)', filter: 'blur(0)'},
+        ], {
+          duration: 240,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          fill: 'both',
+        });
+        const runningAnimations = [enterAnimation];
+
+        if (compactLayout && prototypePanelsRoot) {
+          const panelStyles = window.getComputedStyle(prototypePanelsRoot);
+          const verticalPadding = Number.parseFloat(panelStyles.paddingTop)
+            + Number.parseFloat(panelStyles.paddingBottom);
+          const endHeight = nextPanel.getBoundingClientRect().height + verticalPadding;
+          if (Math.abs(endHeight - startHeight) > 1) {
+            runningAnimations.push(prototypePanelsRoot.animate([
+              {height: `${startHeight}px`},
+              {height: `${endHeight}px`},
+            ], {
+              duration: 260,
+              easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+              fill: 'both',
+            }));
+          }
+        }
+
+        prototypePanelTransitionAnimations = runningAnimations;
+        Promise.allSettled(runningAnimations.map((animation) => animation.finished)).then(() => {
+          if (transitionId !== prototypePanelTransitionId) return;
+          stopPrototypePanelTransition();
+        });
+      }).catch(() => {
+        if (transitionId === prototypePanelTransitionId) stopPrototypePanelTransition();
+      });
+    };
+
+    prototypeTabList?.addEventListener('click', (event) => {
+      const tab = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-lab-tab-index]');
+      if (tab) {
+        showPrototypeInfo(Number(tab.dataset.labTabIndex));
+        prototypeAutoplay?.reset();
+      }
+    });
+    prototypeTabList?.addEventListener('keydown', (event) => {
+      const tab = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-lab-tab-index]');
+      if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = getPrototypeInfoTabs();
+      const index = Number(tab.dataset.labTabIndex);
+      const lastIndex = tabs.length - 1;
+      const nextIndex = event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? lastIndex
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      showPrototypeInfo(nextIndex, true);
+      prototypeAutoplay?.reset();
+    });
+
+    const stopPrototypeContentAnimations = () => {
+      prototypeContentAnimations.forEach((animation) => animation.cancel());
+      prototypeContentAnimations = [];
+    };
+
+    const syncPrototypeMediaPlayback = () => {
+      prototypeMedia.forEach((media, index) => {
+        if (index !== prototypeIndex) resetNativeVideo(media);
+      });
+    };
+
+    const showPrototype = (nextIndex: number, animateContent = true) => {
+      if (blueprintModal?.open) return;
+      const previousIndex = prototypeIndex;
+      const targetIndex = (nextIndex + prototypeData.length) % prototypeData.length;
+      const item = prototypeData[targetIndex];
+      if (!item) return;
+      if (targetIndex === previousIndex && animateContent) return;
+
+      const direction = nextIndex >= previousIndex ? 1 : -1;
+      prototypeIndex = targetIndex;
+      prototypeMedia.forEach((media, index) => {
+        const active = index === prototypeIndex;
+        const decorative = media.dataset.decorative === 'true';
+        media.classList.toggle('is-active', active);
+        media.setAttribute('aria-hidden', String(decorative || !active));
+        media.querySelector<HTMLButtonElement>('.carousel-play')?.setAttribute('tabindex', active ? '0' : '-1');
+        if (!active) resetVideoSlide(media);
+      });
+      syncPrototypeMediaPlayback();
+      if (prototypePosition) prototypePosition.textContent = `${String(prototypeIndex + 1).padStart(2, '0')} / ${String(prototypeData.length).padStart(2, '0')}`;
+      prototypeDots.forEach((dot, index) => {
+        const active = index === prototypeIndex;
+        dot.classList.toggle('is-active', active);
+        dot.setAttribute('aria-pressed', String(active));
+      });
+      keepActivePrototypeControlVisible();
+
+      const updateContent = () => {
+        if (prototypeTag) {
+          prototypeTag.textContent = item.tag.label;
+          prototypeTag.dataset.tagColor = item.tag.color;
+        }
+        if (prototypeTitle) prototypeTitle.textContent = item.title;
+        renderPrototypeTabs(item);
+        if (prototypeBlueprint) {
+          const blueprintCta = getBlueprintCta(item);
+          const blueprintCtaHidden = item.blueprintCtaEnabled === false;
+          prototypeBlueprint.hidden = blueprintCtaHidden;
+          prototypeBlueprint.disabled = !blueprintCta;
+          if (blueprintCta) {
+            prototypeBlueprint.textContent = blueprintCta.label;
+            prototypeBlueprint.setAttribute('aria-label', `View ${item.title} blueprint`);
+          } else {
+            prototypeBlueprint.textContent = item.blueprintCtaLabel?.trim()
+              || DEFAULT_BLUEPRINT_CTA_LABEL;
+            prototypeBlueprint.setAttribute('aria-label', `Blueprint unavailable for ${item.title}`);
+          }
+        }
+      };
+
+      stopPrototypeContentAnimations();
+      const transitionId = ++prototypeContentTransitionId;
+      const activeFolderCopy = getPrototypeInfoPanels()
+        .find((panel) => !panel.hidden)
+        ?.querySelector<HTMLElement>('[data-lab-tab-body], [data-lab-tab-items]');
+      const exitTargets = [prototypeTag, prototypeTitle, activeFolderCopy]
+        .filter((target): target is HTMLElement => Boolean(target));
+
+      if (!animateContent || reducedMotion.matches || !exitTargets.length) {
+        updateContent();
+        prototypeModule?.classList.remove('is-prototype-transitioning');
+        prototypeModule?.removeAttribute('aria-busy');
+        return;
+      }
+
+      prototypeModule?.classList.add('is-prototype-transitioning');
+      prototypeModule?.setAttribute('aria-busy', 'true');
+      const exitAnimations = exitTargets.map((target) => target.animate([
+        {opacity: 1, transform: 'translateX(0)', filter: 'blur(0)'},
+        {opacity: 0.18, transform: `translateX(${direction * -7}px)`, filter: 'blur(1.5px)'},
+      ], {
+        duration: 115,
+        easing: 'cubic-bezier(0.4, 0, 1, 1)',
+        fill: 'forwards',
+      }));
+      prototypeContentAnimations = exitAnimations;
+
+      Promise.allSettled(exitAnimations.map((animation) => animation.finished)).then(() => {
+        if (transitionId !== prototypeContentTransitionId) return;
+        updateContent();
+        exitAnimations.forEach((animation) => animation.cancel());
+
+        const activeFolderCopy = getPrototypeInfoPanels()
+          .find((panel) => !panel.hidden)
+          ?.querySelector<HTMLElement>('[data-lab-tab-body], [data-lab-tab-items]');
+        const enterTargets = [prototypeTag, prototypeTitle, activeFolderCopy]
+          .filter((target): target is HTMLElement => Boolean(target));
+        const enterAnimations = enterTargets.map((target, index) => target.animate([
+          {opacity: 0.24, transform: `translateX(${direction * 8}px)`, filter: 'blur(1.5px)'},
+          {opacity: 1, transform: 'translateX(0)', filter: 'blur(0)'},
+        ], {
+          duration: 250,
+          delay: index * 24,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          fill: 'both',
+        }));
+        prototypeContentAnimations = enterAnimations;
+
+        Promise.allSettled(enterAnimations.map((animation) => animation.finished)).then(() => {
+          if (transitionId !== prototypeContentTransitionId) return;
+          enterAnimations.forEach((animation) => animation.cancel());
+          prototypeContentAnimations = [];
+          prototypeModule?.classList.remove('is-prototype-transitioning');
+          prototypeModule?.removeAttribute('aria-busy');
+        });
+      });
+    };
+    prototypeAutoplay = createIdleAutoplayController({
+      enabled: prototypeAutoSwitchEnabled,
+      itemCount: prototypeData.length,
+      intervalMilliseconds: prototypeSwitchIntervalMilliseconds,
+      getActiveVideo: () => getNativeVideo(prototypeMedia[prototypeIndex]),
+      advance: () => showPrototype(prototypeIndex + 1),
+      syncPlayback: syncPrototypeMediaPlayback,
+    });
+    prototypeModule?.addEventListener('carouselvideoplay', () => prototypeAutoplay?.stop());
+    prototypeModule?.addEventListener('carouselvideoend', () => prototypeAutoplay?.start());
+    const selectPrototype = (nextIndex: number) => {
+      showPrototype(nextIndex);
+      prototypeAutoplay?.reset();
+    };
+    prototypeModule?.querySelectorAll('[data-prototype-prev]').forEach((control) => {
+      control.addEventListener('click', () => selectPrototype(prototypeIndex - 1));
+    });
+    prototypeModule?.querySelectorAll('[data-prototype-next]').forEach((control) => {
+      control.addEventListener('click', () => selectPrototype(prototypeIndex + 1));
+    });
+    prototypeDots.forEach((dot, index) => dot.addEventListener('click', () => selectPrototype(index)));
+    if (prototypeData.length > 1) {
+      setupHorizontalSwipe(prototypeMediaStage ?? null, (direction) => {
+        if (!blueprintModal?.open) selectPrototype(prototypeIndex + direction);
+      }, {minimumDistance: 36});
+      prototypeMediaStage?.addEventListener('keydown', (event) => {
+        if (blueprintModal?.open || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+        event.preventDefault();
+        selectPrototype(prototypeIndex + (event.key === 'ArrowRight' ? 1 : -1));
+      });
+      if (prototypeModule && prototypeAutoplay) bindIdleActivity(prototypeModule, prototypeAutoplay);
+    }
+
+    const openBlueprintViewer = (event: MouseEvent) => {
+      const source = getBlueprintViewerSource(prototypeData[prototypeIndex]);
+      if (!source || !blueprintModal || !blueprintIframe) return;
+
+      blueprintReturnFocus = prototypeBlueprint ?? null;
+      if (blueprintDialogTitle) blueprintDialogTitle.textContent = source.title;
+      setBlueprintLoading(true);
+      blueprintIframe.title = source.iframeTitle;
+      document.documentElement.classList.add('blueprint-dialog-open');
+      blueprintModal.showModal();
+      setBlueprintBackgroundInert(true);
+      syncCarouselAutoplay();
+      blueprintLoadFrame = window.requestAnimationFrame(() => {
+        blueprintLoadFrame = undefined;
+        if (!blueprintModal.open) return;
+        blueprintViewer?.getBoundingClientRect();
+        blueprintIframe.src = source.src;
+      });
+      const pointerActivated = event.detail !== 0;
+      blueprintClose?.classList.toggle('suppress-initial-focus', pointerActivated);
+      blueprintClose?.focus({preventScroll: true});
+      if (pointerActivated) {
+        document.addEventListener('keydown', () => {
+          blueprintClose?.classList.remove('suppress-initial-focus');
+        }, {capture: true, once: true});
+      }
+    };
+
+    prototypeBlueprint?.addEventListener('click', openBlueprintViewer);
+    blueprintIframe?.addEventListener('load', () => setBlueprintLoading(false));
+    blueprintClose?.addEventListener('click', () => blueprintModal?.close());
+    blueprintModal?.addEventListener('close', () => {
+      document.documentElement.classList.remove('blueprint-dialog-open');
+      setBlueprintBackgroundInert(false);
+      if (blueprintLoadFrame) window.cancelAnimationFrame(blueprintLoadFrame);
+      blueprintLoadFrame = undefined;
+      blueprintIframe?.removeAttribute('src');
+      setBlueprintLoading(false);
+      blueprintClose?.classList.remove('suppress-initial-focus');
+      blueprintReturnFocus?.focus({preventScroll: true});
+      blueprintReturnFocus = null;
+      syncCarouselAutoplay();
+    });
+
+    showPrototype(0, false);
+    if (prototypeAutoplay) mediaCarousels.push(prototypeAutoplay);
+    syncCarouselAutoplay();
+
+    const projectModal = document.querySelector<HTMLDialogElement>('[data-project-modal]');
+    const projectPanels = Array.from(projectModal?.querySelectorAll<HTMLElement>('[data-project-detail]') ?? []);
+    const shippedProjectPanels = Array.from(
+      projectModal?.querySelectorAll<HTMLElement>('[data-project-detail][data-project-index]') ?? [],
+    );
+    const projectCarouselControllers = new Map<HTMLElement, {reset: () => void}>();
+    const touchFirstInput = window.matchMedia('(hover: none), (pointer: coarse)');
+    const projectMotionReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let projectReturnFocus: HTMLElement | null = null;
+    let projectDialogOpenedWithPointer = false;
+    let projectSwitching = false;
+
+    projectPanels.forEach((panel) => {
+      const gallery = panel.querySelector<HTMLElement>('[data-project-detail-gallery]');
+      const slides = Array.from(gallery?.querySelectorAll<HTMLElement>('[data-project-detail-slide]') ?? []);
+      const dots = Array.from(gallery?.querySelectorAll<HTMLButtonElement>('[data-project-detail-dot]') ?? []);
+      const position = gallery?.querySelector<HTMLElement>('[data-project-detail-position]');
+      if (!gallery || slides.length < 1) return;
+      let mediaIndex = 0;
+
+      const prepareMedia = (index: number) => {
+        const slide = slides[(index + slides.length) % slides.length];
+        if (slide instanceof HTMLImageElement) {
+          slide.loading = 'eager';
+          slide.decode().catch(() => undefined);
+        } else {
+          const video = getNativeVideo(slide);
+          if (video?.preload === 'none') video.preload = 'metadata';
+        }
+      };
+
+      const showMedia = (nextIndex: number, prepareAdjacent = true) => {
+        mediaIndex = (nextIndex + slides.length) % slides.length;
+        if (prepareAdjacent) {
+          prepareMedia(mediaIndex);
+          prepareMedia(mediaIndex - 1);
+          prepareMedia(mediaIndex + 1);
+        }
+        slides.forEach((slide, index) => {
+          const active = index === mediaIndex;
+          const decorative = slide.dataset.decorative === 'true';
+          slide.classList.toggle('is-active', active);
+          slide.setAttribute('aria-hidden', String(decorative || !active));
+          slide.querySelector<HTMLButtonElement>('.carousel-play')?.setAttribute('tabindex', active ? '0' : '-1');
+          if (!active) resetVideoSlide(slide);
+        });
+        dots.forEach((dot, index) => {
+          const active = index === mediaIndex;
+          dot.classList.toggle('is-active', active);
+          dot.setAttribute('aria-pressed', String(active));
+        });
+        if (position) position.textContent = `${String(mediaIndex + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      };
+
+      if (slides.length > 1) {
+        gallery.querySelector('[data-detail-media-prev]')?.addEventListener('click', () => showMedia(mediaIndex - 1));
+        gallery.querySelector('[data-detail-media-next]')?.addEventListener('click', () => showMedia(mediaIndex + 1));
+        dots.forEach((dot, index) => dot.addEventListener('click', () => showMedia(index)));
+        gallery.addEventListener('keydown', (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          showMedia(mediaIndex + (event.key === 'ArrowRight' ? 1 : -1));
+        });
+        setupHorizontalSwipe(gallery.querySelector<HTMLElement>('.project-detail-stage'), (direction) => {
+          showMedia(mediaIndex + direction);
+        }, {minimumDistance: 40});
+      }
+
+      projectCarouselControllers.set(panel, {reset: () => showMedia(0, true)});
+      showMedia(0, false);
+    });
+
+    const showProjectDetail = async (
+      slug: string,
+      returnFocus?: HTMLElement | null,
+      direction = 0,
+    ) => {
+      if (!projectModal) return;
+      const panel = projectPanels.find((candidate) => candidate.dataset.projectDetail === slug);
+      if (!panel) return;
+      const wasOpen = projectModal.open;
+      const currentPanel = projectPanels.find((candidate) => !candidate.hidden);
+      const shouldAnimate = Boolean(
+        wasOpen
+        && currentPanel
+        && currentPanel !== panel
+        && direction !== 0
+        && !projectMotionReduced.matches,
+      );
+      if (projectSwitching && wasOpen) return;
+      if (returnFocus) projectReturnFocus = returnFocus;
+
+      const dialogShell = projectModal.querySelector<HTMLElement>('.project-dialog-shell');
+      if (shouldAnimate && currentPanel) {
+        projectSwitching = true;
+        projectModal.classList.add('is-switching-project');
+        dialogShell?.setAttribute('aria-busy', 'true');
+        const outgoing = currentPanel.animate(
+          [
+            {opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)'},
+            {opacity: 0, transform: `translate3d(${-direction * 14}px, 0, 0) scale(0.996)`},
+          ],
+          {duration: 120, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards'},
+        );
+        await outgoing.finished.catch(() => undefined);
+        outgoing.cancel();
+      }
+
+      projectPanels.forEach((candidate) => {
+        const active = candidate === panel;
+        candidate.hidden = !active;
+        if (!active) {
+          candidate.querySelectorAll<HTMLElement>('[data-youtube-video-id], [data-native-video-slide]').forEach(resetVideoSlide);
+        }
+      });
+      projectCarouselControllers.get(panel)?.reset();
+      const title = panel.querySelector('h2');
+      if (title?.id) projectModal.setAttribute('aria-labelledby', title.id);
+      dialogShell?.scrollTo({top: 0, behavior: 'auto'});
+      if (!wasOpen) {
+        document.documentElement.classList.add('project-dialog-open');
+        projectModal.showModal();
+        syncCarouselAutoplay();
+      }
+
+      if (shouldAnimate) {
+        const incoming = panel.animate(
+          [
+            {opacity: 0, transform: `translate3d(${direction * 22}px, 0, 0) scale(0.996)`},
+            {opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)'},
+          ],
+          {duration: 280, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both'},
+        );
+        await incoming.finished.catch(() => undefined);
+        incoming.cancel();
+        projectSwitching = false;
+        projectModal.classList.remove('is-switching-project');
+        dialogShell?.removeAttribute('aria-busy');
+      }
+
+      if (wasOpen) title?.focus({preventScroll: true});
+      else {
+        const closeButton = projectModal.querySelector<HTMLButtonElement>('[data-dialog-close]');
+        closeButton?.classList.toggle('suppress-initial-focus', projectDialogOpenedWithPointer);
+        closeButton?.focus({preventScroll: true});
+      }
+    };
+
+    document.querySelectorAll<HTMLElement>('[data-project-dialog]').forEach((trigger) => {
+      trigger.addEventListener('click', (event) => {
+        projectDialogOpenedWithPointer = touchFirstInput.matches && event.detail !== 0;
+        const slug = trigger.getAttribute('data-project-dialog');
+        if (slug) void showProjectDetail(slug, trigger);
+      });
+    });
+
+    projectModal?.addEventListener('keydown', () => {
+      projectDialogOpenedWithPointer = false;
+      projectModal.querySelector('[data-dialog-close]')?.classList.remove('suppress-initial-focus');
+    }, {capture: true});
+
+    shippedProjectPanels.forEach((panel, index) => {
+      panel.querySelector('[data-detail-project-prev]')?.addEventListener('click', () => {
+        const previous = shippedProjectPanels[(index - 1 + shippedProjectPanels.length) % shippedProjectPanels.length];
+        if (previous?.dataset.projectDetail) void showProjectDetail(previous.dataset.projectDetail, undefined, -1);
+      });
+      panel.querySelector('[data-detail-project-next]')?.addEventListener('click', () => {
+        const next = shippedProjectPanels[(index + 1) % shippedProjectPanels.length];
+        if (next?.dataset.projectDetail) void showProjectDetail(next.dataset.projectDetail, undefined, 1);
+      });
+    });
+
+    projectModal?.querySelector('[data-dialog-close]')?.addEventListener('click', () => projectModal.close());
+    projectModal?.addEventListener('click', (event) => { if (event.target === projectModal) projectModal.close(); });
+    projectModal?.addEventListener('close', () => {
+      projectSwitching = false;
+      projectModal.classList.remove('is-switching-project');
+      projectModal.querySelector<HTMLElement>('.project-dialog-shell')?.removeAttribute('aria-busy');
+      document.documentElement.classList.remove('project-dialog-open');
+      projectPanels.forEach((panel) => {
+        panel.querySelectorAll<HTMLElement>('[data-youtube-video-id], [data-native-video-slide]').forEach(resetVideoSlide);
+      });
+      projectModal.querySelector('[data-dialog-close]')?.classList.remove('suppress-initial-focus');
+      const returnFocusTarget = projectReturnFocus;
+      if (projectDialogOpenedWithPointer) {
+        returnFocusTarget?.classList.add('suppress-return-focus');
+        returnFocusTarget?.addEventListener('blur', () => {
+          returnFocusTarget.classList.remove('suppress-return-focus');
+        }, {once: true});
+      }
+      returnFocusTarget?.focus({preventScroll: true});
+      projectReturnFocus = null;
+      projectDialogOpenedWithPointer = false;
+      syncCarouselAutoplay();
+    });
+
+    const sectionNavigationLinks = document.querySelectorAll<HTMLAnchorElement>(
+      '.brand[href^="#"], .desktop-nav a[href^="#"], .mobile-menu nav a[href^="#"], .site-footer a[href^="#"]',
+    );
+    sectionNavigationLinks.forEach((link) => link.addEventListener('click', (event) => {
+      const hash = link.getAttribute('href');
+      if (!hash || hash === '#resume') return;
+
+      const target = document.querySelector<HTMLElement>(hash);
+      if (!target) return;
+
+      event.preventDefault();
+      target.scrollIntoView({
+        behavior: reducedMotion.matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+      history.replaceState(history.state, '', `${location.pathname}${location.search}`);
+      link.closest('details')?.removeAttribute('open');
+    }));
+  </script>
+</BaseLayout>
