@@ -64,6 +64,7 @@ export type RawPrototype = {
 export type RawSeo = {
   title?: string
   description?: string
+  useSocialImage?: boolean
   socialImage?: RawImagePlacement
 }
 

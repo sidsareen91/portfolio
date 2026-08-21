@@ -317,6 +317,30 @@ test('Site Settings is the sole SEO source', async () => {
   assert.equal(payload.description, 'Global description')
   assert.equal(payload.canonicalUrl, 'https://portfolio.example')
 
+  const disabledSocialImage = adaptCmsPayload({
+    settings: {
+      defaultSeo: {
+        title: 'Global title',
+        description: 'Global description',
+        useSocialImage: false,
+        socialImage: {image: {asset: {_ref: 'image-social-preview-1200x630-jpg'}}},
+      },
+    },
+  }).seo
+  assert.equal(disabledSocialImage.socialImage, undefined)
+
+  const enabledSocialImage = adaptCmsPayload({
+    settings: {
+      defaultSeo: {
+        title: 'Global title',
+        description: 'Global description',
+        useSocialImage: true,
+        socialImage: {image: {asset: {_ref: 'image-social-preview-1200x630-jpg'}}},
+      },
+    },
+  }).seo
+  assert.ok(enabledSocialImage.socialImage)
+
   const [homePageSchema, seoSchema, querySource] = await Promise.all([
     readFile(resolve(process.cwd(), 'studio/schemas/documents/homePage.ts'), 'utf8'),
     readFile(resolve(process.cwd(), 'studio/schemas/objects/seo.ts'), 'utf8'),
@@ -324,6 +348,9 @@ test('Site Settings is the sole SEO source', async () => {
   ])
   assert.doesNotMatch(homePageSchema, /Homepage SEO override|name: 'seo'/)
   assert.match(seoSchema, /Rule\.required\(\)/)
+  assert.match(seoSchema, /name: 'useSocialImage'/)
+  assert.match(seoSchema, /hidden: \(\{parent\}\) => parent\?\.useSocialImage !== true/)
+  assert.match(seoSchema, /Upload a social image or turn off Use social image\./)
   assert.doesNotMatch(querySource, /"page"[\s\S]*?seo\{title, description/)
 })
 

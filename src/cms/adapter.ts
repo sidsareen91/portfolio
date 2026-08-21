@@ -105,7 +105,9 @@ function mapMediaPoster(
 function mapSeo(value: RawCmsPayload): SeoContent {
   const settings = value.settings
   const globalSeo = settings?.defaultSeo
-  const socialImage = globalSeo?.socialImage
+  const socialImage = globalSeo?.useSocialImage === true
+    ? globalSeo.socialImage
+    : undefined
 
   return {
     title: globalSeo?.title?.trim() || '',

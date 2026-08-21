@@ -27,10 +27,25 @@ export const seo = defineType({
       ],
     }),
     defineField({
+      name: 'useSocialImage',
+      title: 'Use social image',
+      type: 'boolean',
+      description: 'Enable only when you want to upload a site-wide image for social sharing.',
+      initialValue: false,
+      options: {layout: 'checkbox'},
+    }),
+    defineField({
       name: 'socialImage',
       title: 'Social image',
       type: 'imagePlacement',
-      description: 'Optional site-wide sharing preview. Recommended size: 1200x630. Add alternative text when supplied.',
+      description: 'Site-wide sharing preview. Recommended size: 1200x630. Add alternative text when supplied.',
+      hidden: ({parent}) => parent?.useSocialImage !== true,
+      validation: (Rule) => Rule.custom((value, context) => {
+        const parent = context.parent as {useSocialImage?: boolean} | undefined
+        return parent?.useSocialImage !== true || value
+          ? true
+          : 'Upload a social image or turn off Use social image.'
+      }),
     }),
   ],
 })

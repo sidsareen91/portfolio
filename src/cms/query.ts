@@ -10,7 +10,7 @@ export const HOME_PAGE_QUERY = `{
     resumeLabel,
     "resumeUrl": coalesce(resumeFile.asset->url, resumeUrl),
     siteUrl,
-    defaultSeo{title, description, socialImage{image, alt}}
+    defaultSeo{title, description, useSocialImage, socialImage{image, alt}}
   },
   "page": *[_type == "homePage" && _id == "homePage"][0]{
     sectionOrder,
