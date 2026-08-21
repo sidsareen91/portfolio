@@ -956,6 +956,9 @@ h4,
 .work-carousel { min-width: 0; }
 .work-gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(12px, 1.4vw, 20px); }
 .work-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
   min-width: 0;
   padding: 0;
   overflow: hidden;
@@ -983,6 +986,7 @@ h4,
   background: var(--navy);
 }
 .work-art img {
+  display: block;
   object-fit: contain;
   transform: translateZ(0);
   transition:
