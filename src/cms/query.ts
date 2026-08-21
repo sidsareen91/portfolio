@@ -19,7 +19,7 @@ export const HOME_PAGE_QUERY = `{
       headline,
       autoSwitchItems,
       switchIntervalSeconds,
-      media[]{kind, image, "imageAsset": image.asset->{url, mimeType}, videoFile{asset->{url}}, videoUrl, poster, alt, decorative, displayMode, caption}
+      media[visible != false][]{kind, image, "imageAsset": image.asset->{url, mimeType}, videoFile{asset->{url}}, videoUrl, poster, alt, decorative, displayMode, caption}
     },
     stats[]{value, label},
     featuredProjectKicker,
@@ -40,7 +40,7 @@ export const HOME_PAGE_QUERY = `{
     designLabTitle,
     designLabAutoSwitchItems,
     designLabSwitchIntervalSeconds,
-    "prototypes": prototypes[]->{
+    "prototypes": prototypes[visible != false][]->{
       title,
       "slug": slug.current,
       tagLabel,
@@ -60,7 +60,7 @@ export const HOME_PAGE_QUERY = `{
     shippedWork{
       kicker,
       title,
-      "projects": projects[]->{
+      "projects": projects[visible != false][]->{
         title,
         "slug": slug.current,
         projectType,
