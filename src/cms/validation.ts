@@ -79,7 +79,6 @@ export function validateHomePagePayload(payload: HomePagePayload): void {
   exactLength(site.stats, 4, 'site.stats', errors)
   exactLength(site.approach, 4, 'site.approach', errors)
   if (site.shippedWork.length < 1) errors.push('site.shippedWork must contain at least 1 item')
-  exactLength(site.about.notes, 3, 'site.about.notes', errors)
 
   if (site.prototypes.length < 1) errors.push('site.prototypes must contain at least 1 item')
   if (site.about.tags.length < 1 || site.about.tags.length > 6) {

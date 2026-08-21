@@ -265,10 +265,6 @@ export function adaptCmsPayload(raw: RawCmsPayload): HomePagePayload {
     })),
     about: {
       bio: page?.about?.bio?.trim() ?? '',
-      notes: (page?.about?.notes ?? []).map((note) => ({
-        title: note.title?.trim() ?? '',
-        description: note.description?.trim() ?? '',
-      })),
       tags: (page?.about?.tags ?? []).map((tag) => tag.trim()),
     },
     contact: {
@@ -285,7 +281,6 @@ export function adaptCmsPayload(raw: RawCmsPayload): HomePagePayload {
     shippedWorkTitle: page?.shippedWork?.title?.trim() ?? '',
     aboutKicker: page?.about?.kicker?.trim() ?? '',
     aboutHeading: page?.about?.heading?.trim() ?? '',
-    fieldNotesTitle: page?.about?.fieldNotesTitle?.trim() ?? '',
     contactKicker: page?.contact?.kicker?.trim() ?? '',
   }
 

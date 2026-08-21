@@ -223,12 +223,6 @@ export async function buildMigrationDocuments(
       heading: pageCopy.aboutHeading,
       bio: site.about.bio,
       tags: site.about.tags,
-      fieldNotesTitle: pageCopy.fieldNotesTitle,
-      notes: site.about.notes.map((note, index) => ({
-        _key: `note-${index + 1}`,
-        _type: 'fieldNote',
-        ...note,
-      })),
     },
     contact: {
       _type: 'object',

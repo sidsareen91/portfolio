@@ -603,17 +603,6 @@ const serializeForScript = (value: unknown) => JSON.stringify(value)
           <div class="capability-tags" aria-label="Design focus areas">
             {site.about.tags.map((tag) => <span>{tag}</span>)}
           </div>
-          <div class="field-notes">
-            <h3>{pageCopy.fieldNotesTitle}</h3>
-            <dl>
-              {site.about.notes.map((note) => (
-                <div>
-                  <dt>{note.title}</dt>
-                  <dd>{note.description}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
         </div>
       </section>
       )}

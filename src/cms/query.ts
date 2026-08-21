@@ -75,7 +75,7 @@ export const HOME_PAGE_QUERY = `{
         galleryMedia[]{kind, image, "imageAsset": image.asset->{url, mimeType}, videoFile{asset->{url}}, videoUrl, poster, alt, decorative, displayMode, caption}
       }
     },
-    about{kicker, heading, bio, tags, fieldNotesTitle, notes[]{title, description}},
+    about{kicker, heading, bio, tags},
     contact{kicker, headline}
   }
 }`

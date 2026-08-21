@@ -105,7 +105,6 @@ export type SiteContent = {
   shippedWork: ShippedProject[];
   about: {
     bio: string;
-    notes: Array<{title: string; description: string}>;
     tags: string[];
   };
   contact: {
@@ -122,7 +121,6 @@ export type HomePageCopy = {
   shippedWorkTitle: string;
   aboutKicker: string;
   aboutHeading: string;
-  fieldNotesTitle: string;
   contactKicker: string;
 };
 
@@ -147,7 +145,6 @@ export const pageCopy: HomePageCopy = {
   shippedWorkTitle: 'Selected shipped work',
   aboutKicker: 'About me',
   aboutHeading: 'Hi, I’m Siddharth.',
-  fieldNotesTitle: 'Field notes',
   contactKicker: 'Get in touch',
 };
 
@@ -343,11 +340,6 @@ export const site: SiteContent = {
   ] satisfies ShippedProject[],
   about: {
     bio: 'I design combat, progression and multiplayer systems, then prototype them in-engine to test how they actually play.',
-    notes: [
-      { title: 'Systems Thinking', description: 'Mechanics, progression and economies designed as connected systems.' },
-      { title: 'Prototyping', description: 'Fast in-engine tests before committing to production.' },
-      { title: 'Technical Design', description: 'Blueprint systems that turn design intent into playable behaviour.' },
-    ],
     tags: ['Combat Design', 'Systems Design', 'Multiplayer', 'Rapid Prototyping'],
   },
   contact: {

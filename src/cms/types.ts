@@ -111,8 +111,6 @@ export type RawCmsPayload = {
       heading?: string
       bio?: string
       tags?: string[]
-      fieldNotesTitle?: string
-      notes?: Array<{title?: string; description?: string}>
     }
     contact?: {
       kicker?: string
