@@ -45,7 +45,6 @@ const initialBlueprintCtaHidden = site.prototypes[0].blueprintCtaEnabled === fal
 const initialBlueprintCtaLabel = site.prototypes[0].blueprintCtaLabel?.trim()
   || DEFAULT_BLUEPRINT_CTA_LABEL;
 const shippedWorkHasDesktopCarousel = site.shippedWork.length > 4;
-const shippedWorkPositionCount = shippedWorkHasDesktopCarousel ? site.shippedWork.length - 3 : 0;
 const shippedDetailProjects = prepareProjectDetailPreview(site.shippedWork, import.meta.env.DEV);
 const youtubePoster = (src: string, poster: string | undefined) => {
   const videoId = getYouTubeVideoId(src);
@@ -564,28 +563,6 @@ const serializeForScript = (value: unknown) => JSON.stringify(value)
             </div>
           )}
         </div>
-        {shippedWorkHasDesktopCarousel && (
-          <div class="carousel-navigation work-navigation">
-            <div
-              class="work-progress carousel-progress"
-              style={`--carousel-items: ${shippedWorkPositionCount}`}
-              aria-label="Select shipped work position"
-            >
-              {Array.from({length: shippedWorkPositionCount}, (_, index) => (
-                <button
-                  type="button"
-                  class:list={{'is-active': index === 0}}
-                  data-shipped-dot
-                  aria-label={`Show shipped projects ${index + 1} to ${index + 4}`}
-                  aria-pressed={index === 0 ? 'true' : 'false'}
-                ></button>
-              ))}
-            </div>
-            <span class="carousel-position" data-shipped-position aria-live="polite" aria-atomic="true">
-              01 / {String(shippedWorkPositionCount).padStart(2, '0')}
-            </span>
-          </div>
-        )}
         {shippedWorkHasDesktopCarousel && (
           <span class="work-carousel-status" data-shipped-status aria-live="polite">
             Showing projects 1 to 4 of {site.shippedWork.length}
@@ -1408,11 +1385,9 @@ const serializeForScript = (value: unknown) => JSON.stringify(value)
       if (!root || !track) return;
 
       const cards = Array.from(track.querySelectorAll<HTMLElement>('.work-card'));
-      const dots = Array.from(root.parentElement?.querySelectorAll<HTMLButtonElement>('[data-shipped-dot]') ?? []);
       const previousButton = root.querySelector<HTMLButtonElement>('[data-shipped-prev]');
       const nextButton = root.querySelector<HTMLButtonElement>('[data-shipped-next]');
       const status = root.parentElement?.querySelector<HTMLElement>('[data-shipped-status]');
-      const position = root.parentElement?.querySelector<HTMLElement>('[data-shipped-position]');
       const desktopViewport = window.matchMedia('(min-width: 1024px)');
       const visibleCards = 4;
       const maximumIndex = Math.max(0, cards.length - visibleCards);
@@ -1433,18 +1408,10 @@ const serializeForScript = (value: unknown) => JSON.stringify(value)
 
       const syncControls = (nextIndex: number) => {
         currentIndex = Math.max(0, Math.min(nextIndex, maximumIndex));
-        dots.forEach((dot, index) => {
-          const active = index === currentIndex;
-          dot.classList.toggle('is-active', active);
-          dot.setAttribute('aria-pressed', String(active));
-        });
         if (previousButton) previousButton.disabled = currentIndex === 0;
         if (nextButton) nextButton.disabled = currentIndex === maximumIndex;
         if (status) {
           status.textContent = `Showing projects ${currentIndex + 1} to ${Math.min(currentIndex + visibleCards, cards.length)} of ${cards.length}`;
-        }
-        if (position) {
-          position.textContent = `${String(currentIndex + 1).padStart(2, '0')} / ${String(maximumIndex + 1).padStart(2, '0')}`;
         }
       };
 
@@ -1501,7 +1468,6 @@ const serializeForScript = (value: unknown) => JSON.stringify(value)
 
       previousButton?.addEventListener('click', () => show(currentIndex - 1));
       nextButton?.addEventListener('click', () => show(currentIndex + 1));
-      dots.forEach((dot, index) => dot.addEventListener('click', () => show(index)));
 
       root.addEventListener('keydown', (event) => {
         if (!desktopViewport.matches || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;

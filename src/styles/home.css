@@ -320,18 +320,18 @@ h4,
 
 .carousel-navigation {
   --carousel-counter-size: clamp(0.76rem, 0.7rem + 0.18vw, 0.9rem);
+  --carousel-navigation-offset: -6px;
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: clamp(10px, 1vw, 16px);
   align-items: center;
-  margin-top: -6px;
+  margin-top: var(--carousel-navigation-offset);
 }
 
 .hero-progress,
 .project-progress,
-.lab-progress,
-.work-progress { display: grid; }
+.lab-progress { display: grid; }
 
 .carousel-navigation > .carousel-progress {
   min-width: 0;
@@ -368,7 +368,6 @@ h4,
 .hero-progress button,
 .project-progress button,
 .lab-progress button,
-.work-progress button,
 .project-detail-progress button {
   min-width: 24px;
   min-height: 44px;
@@ -383,7 +382,6 @@ h4,
 .hero-progress button::before,
 .project-progress button::before,
 .lab-progress button::before,
-.work-progress button::before,
 .project-detail-progress button::before {
   content: '';
   display: block;
@@ -393,12 +391,12 @@ h4,
   opacity: 0.4;
 }
 
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button:nth-child(4n + 1)::before { background: var(--mint); }
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button:nth-child(4n + 2)::before { background: var(--lavender); }
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button:nth-child(4n + 3)::before { background: var(--coral); }
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button:nth-child(4n + 4)::before { background: var(--cream); }
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button.is-active::before { opacity: 1; }
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button::before { transition: opacity 180ms ease-out; }
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button:nth-child(4n + 1)::before { background: var(--mint); }
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button:nth-child(4n + 2)::before { background: var(--lavender); }
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button:nth-child(4n + 3)::before { background: var(--coral); }
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button:nth-child(4n + 4)::before { background: var(--cream); }
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button.is-active::before { opacity: 1; }
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button::before { transition: opacity 180ms ease-out; }
 
 .stats-band {
   display: grid;
@@ -950,7 +948,6 @@ h4,
     scroll-snap-stop: normal;
   }
   .work-carousel-arrows { inset-block: 5px 8px; }
-  .work-progress { display: grid; }
 }
 
 .shipped { padding-block: clamp(34px, 4vw, 58px); }
@@ -1467,17 +1464,19 @@ html.project-dialog-open body { overflow: hidden; }
 }
 .project-detail-copy + .project-detail-project-nav { margin-top: clamp(30px, 3vw, 38px); }
 .project-detail-project-nav button {
+  height: 46px;
   min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 0 14px;
   border: 1px solid transparent;
   border-radius: 6px;
   font-family: var(--display);
   font-size: 1rem;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
@@ -1617,8 +1616,9 @@ html.project-dialog-open body { overflow: hidden; }
 
   .project-detail-project-nav button {
     min-width: 184px;
+    height: 48px;
     min-height: 48px;
-    padding: 11px 18px;
+    padding: 0 18px;
   }
 
 }
@@ -1635,7 +1635,7 @@ html.project-dialog-open body { overflow: hidden; }
   .project-detail-copy p { font-size: 0.9rem; line-height: 1.35; }
   .project-detail-links { margin: 4px auto 12px; }
   .project-detail-project-nav { padding-top: 13px; }
-  .project-detail-project-nav button { min-height: 44px; }
+  .project-detail-project-nav button { height: 44px; min-height: 44px; }
 }
 
 html.blueprint-dialog-open,
@@ -1882,7 +1882,7 @@ html.blueprint-dialog-open body > :not(.blueprint-dialog) {
     display: none;
   }
 
-  .hero { grid-template-columns: 1fr; gap: 22px; padding-block: 28px 18px; }
+  .hero { grid-template-columns: 1fr; gap: 22px; padding-block: 28px 8px; }
   .hero h1 {
     --hero-headline-max-size: clamp(3rem, 14vw, 4.5rem);
     --hero-headline-min-size: 44px;
@@ -1893,11 +1893,119 @@ html.blueprint-dialog-open body > :not(.blueprint-dialog) {
   .approach-flow { grid-template-columns: 1fr 1fr; }
   .approach-step { padding-right: 20px; }
   .approach-step:nth-child(2n) .step-arrow { display: none; }
-  .lab-grid { grid-template-columns: 1fr; }
-  .lab-copy, .lab-media, .lab-controls-tablet { grid-column: 1; }
-  .lab-copy { grid-row: auto; }
-  .lab-media { grid-row: auto; }
-  .lab-controls-tablet { grid-row: auto; }
+  .lab-grid {
+    --lab-stack-gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lab-stack-gap);
+  }
+  .lab-copy,
+  .lab-info-card { display: contents; }
+  .lab-prototype-heading {
+    order: 1;
+    padding: 2px 0 4px;
+  }
+  .lab-prototype-heading::after {
+    width: 100%;
+    height: 2px;
+    margin-top: 12px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--lab-heading) 0 52px, rgba(183, 217, 199, 0.22) 52px 100%);
+  }
+  .lab-tab-shell {
+    position: relative;
+    order: 2;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    margin: 0 0 -4px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid rgba(244, 232, 216, 0.26);
+    border-radius: 7px;
+    background: rgba(4, 16, 29, 0.24);
+    color: var(--cream-muted);
+  }
+  .lab-tab-list {
+    display: flex;
+    max-width: 100%;
+    gap: 4px;
+    margin: 0;
+    padding: 5px;
+    overflow-x: auto;
+    align-items: stretch;
+    border-bottom: 1px solid rgba(244, 232, 216, 0.14);
+    background: rgba(4, 12, 23, 0.38);
+    scroll-padding-inline: 5px;
+    scroll-snap-type: x proximity;
+  }
+  .lab-tab {
+    position: relative;
+    flex: 1 0 max-content;
+    min-width: 96px;
+    min-height: 46px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 0;
+    padding: 10px 13px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: rgba(244, 232, 216, 0.58);
+    box-shadow: none;
+    line-height: 1;
+    text-align: left;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+  .lab-tab::before { display: none; }
+  .lab-tab[aria-selected='true'] {
+    transform: translateY(1px);
+    background: var(--mint);
+    color: var(--navy-deep);
+    box-shadow: inset 0 -2px 0 var(--lab-accent);
+  }
+  .lab-tab[aria-selected='false']:hover {
+    background: rgba(244, 232, 216, 0.04);
+    color: var(--cream);
+  }
+  .lab-tab:focus-visible { outline-offset: -3px; }
+  .lab-tab-shell > [data-lab-panels] {
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+    padding: 15px 14px 16px;
+  }
+  .lab-tab-panel {
+    max-width: none;
+    padding: 0;
+    background: transparent;
+    color: var(--cream-muted);
+  }
+  .lab-media {
+    order: 3;
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-color: rgba(219, 232, 255, 0.14);
+    border-radius: 8px;
+  }
+  .lab-navigation {
+    order: 4;
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    margin-top: calc(var(--carousel-navigation-offset) - var(--lab-stack-gap));
+  }
+  .lab-copy > .blueprint-button {
+    order: 5;
+    width: 100%;
+    margin: -4px 0 4px;
+  }
+  .lab-controls-tablet { display: none; }
   .work-gallery { grid-template-columns: 1fr 1fr; }
   .about-grid { grid-template-columns: 0.7fr 1.3fr; }
   .portrait-card { grid-column: 1; grid-row: 1; min-height: 250px; }
@@ -1963,12 +2071,18 @@ html.blueprint-dialog-open body > :not(.blueprint-dialog) {
     padding-bottom: 8px;
   }
   .project-detail-project-nav button {
+    position: relative;
     min-width: 0;
+    height: 44px;
     min-height: 44px;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: 0;
+    padding: 0 10px;
     font-size: 0.88rem;
+    line-height: 1;
+    white-space: nowrap;
   }
+  .project-detail-project-nav button:first-child::before,
+  .project-detail-project-nav button:last-child::after { content: none; }
   .project-detail-project-nav button:first-child,
   .project-detail-project-nav button:last-child { grid-row: 1; justify-self: stretch; }
   .project-detail-project-nav button:first-child { grid-column: 1; }
@@ -2137,7 +2251,7 @@ html.blueprint-dialog-open body > :not(.blueprint-dialog) {
   .step-arrow { display: none; }
 
   .design-lab { margin-inline: 7px; padding-block: 22px 18px; }
-  .lab-grid { display: flex; flex-direction: column; gap: 12px; }
+  .lab-grid { display: flex; flex-direction: column; gap: var(--lab-stack-gap); }
   .lab-copy, .lab-info-card { display: contents; }
   .lab-prototype-heading {
     order: 1;
@@ -2447,7 +2561,7 @@ html.blueprint-dialog-open body > :not(.blueprint-dialog) {
   transform: translateY(1px) scale(0.95);
 }
 
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button::before {
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button::before {
   transform-origin: center;
   transition:
     opacity 180ms ease-out,
@@ -2456,14 +2570,14 @@ html.blueprint-dialog-open body > :not(.blueprint-dialog) {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  :is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button:hover::before {
+  :is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button:hover::before {
     opacity: 0.82;
     filter: brightness(1.12);
     transform: scaleY(1.35);
   }
 }
 
-:is(.hero-progress, .project-progress, .lab-progress, .work-progress, .project-detail-progress) button:active::before {
+:is(.hero-progress, .project-progress, .lab-progress, .project-detail-progress) button:active::before {
   opacity: 1;
   transform: scaleX(0.94) scaleY(1.15);
 }
